@@ -1,0 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100%;
+    background-color: #f3e5f5; /* Soft Lavender */
+    font-family: 'Poppins', sans-serif;
+}
+
+nav .logo {
+    display: flex;
+    align-items: center;
+}
+
+nav .logo-image {
+    width: 80px;
+    height: auto;
+}
+
+nav .logo-image img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    padding-left: 18px;
+    margin-top: 10px;
+}
+
+nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 250px;
+    background-color: #6a1b9a; /* Deep Purple */
+    padding: 10px 0 10px 10px;
+}
+
+nav .menu-items {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px);
+    justify-content: space-between;
+}
+
+nav .menu-items li {
+    list-style: none;
+}
+
+nav .menu-items li a {
+    display: flex;
+    align-items: center;
+    height: 50px;
+    text-decoration: none;
+}
+
+nav .menu-items li a ion-icon {
+    color: #d1c4e9; /* Soft Purple */
+    font-size: 24px;
+    min-width: 45px;
+}
+
+nav .menu-items li a .links {
+    font-size: 18px;
+    color: #d1c4e9;
+}
+
+nav .menu-items li.active a {
+    background-color: #f3e5f5; /* Soft Lavender */
+}
+
+nav .menu-items li.active a:before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    right: 0;
+    top: -40px;
+    border-radius: 50%;
+    box-shadow: 20px 20px #f3e5f5;
+    pointer-events: none;
+}
+
+nav .menu-items li.active a:after {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    right: 0;
+    bottom: -40px;
+    border-radius: 50%;
+    box-shadow: 20px -20px #f3e5f5;
+    pointer-events: none;
+}
+
+nav .menu-items li.active a .links,
+nav .menu-items li.active a ion-icon {
+    color: #6a1b9a; /* Deep Purple */
+}
+
+.dashboard {
+    position: relative;
+    left: 250px;
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    background-color: #f3e5f5;
+    padding: 0px 15px;
+}
+
+.container {
+    padding-left: 10px;
+}
+
+.container .title {
+    display: flex;
+    align-items: center;
+    margin: 60px 0 30px;
+}
+
+.container .title ion-icon {
+    width: 35px;
+    height: 35px;
+    padding: 5px;
+    background-color: #8e24aa;
+    color: white;
+    border-radius: 6px;
+}
+
+.container .title .text {
+    font-size: 24px;
+    font-weight: 500;
+    color: #4a148c; /* Dark Purple */
+    margin-left: 10px;
+}
+
+.container .boxes {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: none;
+}
+
+.container .boxes .box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: calc(100%/4 - 15px);
+    padding: 15px 20px;
+    border-radius: 10px;
+    background-color: #ce93d8;
+}
+
+.boxes .box ion-icon {
+    font-size: 35px;
+    color: white;
+    margin: 5px;
+}
+
+.boxes .box .text,
+.boxes .box .number {
+    font-size: 18px;
+    font-weight: 500;
+    color: white;
+}
+
+.boxes .box.box1 {
+    background-color: #ba68c8;
+}
+
+.boxes .box.box2 {
+    background-color: #ab47bc;
+}
+
+.boxes .box.box3 {
+    background-color: #8e24aa;
+}
+
+.boxes .box.box4 {
+    background-color: #6a1b9a;
+}
+
+.container .table-design {
+    padding: 0px 20px 40px 70px;
+}
+
+.container .activity {
+    width: 90%;
+    font-size: 18px;
+    color: #4a148c;
+    margin-top: 20px;
+}
+
+.container .activity tbody tr.odd {
+    background-color: #d1c4e9;
+}
+
+/* Add user */
+.addUser-field input[type="submit"],
+.editForm input[type="submit"] {
+    width: 300px;
+    padding: 10px;
+    background-color: #8e24aa;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
