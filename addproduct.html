@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System - Add Product</title>
+    <link rel="stylesheet" href="/Assets/addproduct.css">
+    <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/esm/ionicons.min.js"></script>
+    <script type="module"src="addproduct.js"></script>
+    <script type="module" src="logoutindex.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">
+            <div class="logo-image">
+                <img src="bizlogo.png" alt="Logo">
+            </div>
+        </div>
+        <ul class="menu-items">
+            <li>
+                <a href="Index.html">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    <span class="links">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <ion-icon name="document-text-outline"></ion-icon>
+                    <span class="links">Content</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <ion-icon name="stats-chart-outline"></ion-icon>
+                    <span class="links">Analytics</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <ion-icon name="people-outline"></ion-icon>
+                    <span class="links">Customer Purchase</span>
+                </a>
+            </li>
+            <li class="active">
+                <a href="#">
+                    <ion-icon name="add-circle-outline"></ion-icon>
+                    <span class="links">Add Product</span>
+                </a>
+            </li>
+            <li style="margin-top: auto;">
+                <a class="profile" href="#">
+                    <ion-icon name="person-circle-outline"></ion-icon>
+                    <span  class="links">Profile</span>
+                </a>
+            </li>
+            <li>
+                <a href="#logout" id="logout">
+                    <ion-icon name="log-out-outline"></ion-icon>
+                    <span class="links">Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    
+    <div class="dashboard">
+        <div class="header">
+            <div class="header-icon">
+                <ion-icon name="add-circle-outline"></ion-icon>
+            </div>
+            <h1>Add Product</h1>
+        </div>
+
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <ion-icon name="cube-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                    <h3>Manage Inventory</h3>
+                    <p>18345</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <ion-icon name="swap-horizontal-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                    <h3>Manage Transaction</h3>
+                    <p>2745</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <ion-icon name="bar-chart-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                    <h3>Sales Report</h3>
+                    <p>1209</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <ion-icon name="cart-outline"></ion-icon>
+                </div>
+                <div class="stat-info">
+                    <h3>Customer Purchase</h3>
+                    <p>123</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <div class="section-icon">
+                <ion-icon name="bag-outline"></ion-icon>
+            </div>
+            <h2>Products</h2>
+        </div>
+
+        <div id="addProductForm" class="add-product-form">
+            <h3>Add New Product</h3>
+            <form>
+                <div class="form-group">
+                    <label for="productName">Product Name</label>
+                    <input type="text" id="productName" name="productName" placeholder="Enter product name">
+                </div>
+                <div class="form-group">
+                    <label for="productCategory">Category</label>
+                    <select id="productCategory" name="productCategory">
+                        <option value="">Select category</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="food">Food</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productPrice">Price (₱)</label>
+                        <input type="number" id="productPrice" name="productPrice" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="productQuantity">Quantity</label>
+                        <input type="number" id="productQuantity" name="productQuantity" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">Description</label>
+                    <textarea id="productDescription" name="productDescription" placeholder="Enter product description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="productImage">Product Image</label>
+                    <div class="image-upload">
+                        <input type="file" id="productImage" name="productImage" accept="image/*">
+                        <div class="upload-placeholder">
+                            <ion-icon name="image-outline"></ion-icon>
+                            <p>Click to upload image</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-save">Save Product</button>
+                    <button type="reset" class="btn-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-header">
+            <div class="section-icon">
+                <ion-icon name="list-outline"></ion-icon>
+            </div>
+            <h2>Recent Products</h2>
+        </div>
+
+        <div class="products-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Product Name 1</td>
+                        <td>Electronics</td>
+                        <td>₱1,299.00</td>
+                        <td>15</td>
+                        <td class="actions">
+                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
+                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Prod    uct Name 2</td>
+                        <td>Clothing</td>
+                        <td>₱599.00</td>
+                        <td>32</td>
+                        <td class="actions">
+                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
+                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Product Name 3</td>
+                        <td>Food</td>
+                        <td>₱199.50</td>
+                        <td>50</td>
+                        <td class="actions">
+                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
+                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

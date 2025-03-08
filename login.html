@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bizventory Login</title>
+    <link rel="stylesheet" href="/Assets/login.css">
+    <link rel="icon" type="png" href="Assets/bizlogo.png">
+    <script type="module" src="login.js" defer></script>
+    <script type="module" src="firebaseauth.js" defer></script>
+</head>
+<body>
+
+    <!-- From Uiverse.io  --> 
+    <div class="pattern-container"></div>
+
+    <div class="login-container">
+        <div class="login-box">
+            <div id="signInMessage" class="messageDiv" style="display:none;"></div>
+            <img src="/BizventoryLoginFinal/Assets/bizlogo.png" alt="Bizventory Logo" class="app-logo">
+            <h2 id="form-title">Login To Bizventory</h2>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <p class="forgot-password"><a href="#">Forgot Password?</a></p>
+                <button type="submit">Log In</button>
+            </form>
+
+            <!-- SIGN UP FORM (Hidden by Default) -->
+            <form id="signup-form" style="display: none;">
+                <div id="signUpMessage" class="messageDiv" style="display:none;"></div>
+                <input type="text" id="signup-firstname" placeholder="First Name" required>
+                <input type="text" id="signup-lastname" placeholder="Last Name" required>
+                <input type="email" id="signup-email" placeholder="Email" required>
+                <input type="password" id="signup-password" placeholder="Password" required>
+                <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+
+            <!-- TOGGLE SIGNUP & LOGIN -->
+            <p class="account">
+                <span id="toggle-form">Don't have an account? <a href="#">Sign Up</a></span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

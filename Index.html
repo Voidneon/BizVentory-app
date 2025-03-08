@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--<link rel="stylesheet" href="/  Assets/style.css">-->
+    <link rel="stylesheet" href="/Assets/style.css">
+    <title>Dashboard</title>
+</head>
+
+<body>
+    
+    <nav>
+        <div class="logo">
+            <div class="logo-image">
+                <img src="/BizventoryFireBasePort/Assets/bizlogo.png" alt="">
+            </div>
+        </div>
+        <div class="menu-items">
+            <ul class="navLinks">
+                <li class="navList active">
+                    <a href="#">
+                        <ion-icon name="home-outline"></ion-icon>
+                        <span class="links">Dashboard</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="#">
+                        <ion-icon name="folder-outline"></ion-icon>
+                        <span class="links">Content</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="#">
+                        <ion-icon name="analytics-outline"></ion-icon>
+                        <span class="links">Analytics</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="#">
+                        <ion-icon name="person-add-outline"></ion-icon>
+                        <span class="links">Customer Purchase</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="addproduct.html">
+                        <ion-icon name="bag-add-outline"></ion-icon>
+                        <span class="links">Add Product</span>
+                    </a>
+                </li>
+            </ul>
+            <ul class="bottom-link">
+                <li>
+                    <a class="profile" href="#">
+                        <ion-icon name="person-circle-outline"></ion-icon>
+                        <span name="profile" class="links">Profile</span>
+                    </a>
+                </li>
+                <li>
+                        <a href="#logout" id="logout">
+                            <ion-icon name="log-out-outline"></ion-icon>
+                            <span class="links">Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="dashboard">
+        <div class="container"> 
+            <div class="overview">
+                <div class="title">
+                    <ion-icon name="accessibility-outline"></ion-icon>
+                    <span class="text">Dashboard</span>
+                </div>
+                <div class="boxes">
+                    <div class="box box1">
+                        <ion-icon name="storefront-outline"></ion-icon>
+                        <span class="text">Manage Inventory</span>
+                        <span class="number">18345</span>
+                    </div>
+                    <div class="box box2">
+                        <ion-icon name="people-outline"></ion-icon>
+                        <span class="text">Manage Transaction</span>
+                        <span class="number">2745</span>
+                    </div>
+                    <div class="box box3">
+                        <ion-icon name="bar-chart-outline"></ion-icon>
+                        <span class=    ext">Sales Report</span>
+                        <span class="number">1209</span>
+                    </div>
+                    <div class="box box4">
+                        <ion-icon name="cart-outline"></ion-icon>
+                        <span class="text">Customer Purchase</span>
+                        <span class="number">123</span>
+                    </div>
+                </div> 
+            </div>
+            
+
+            <!-- Recent Activities -->
+            <div class="data-table activityTable">
+                <div class="title">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span class="text">Recent Activities</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                </div>
+            </div>
+
+            
+            <!-- Content -->
+            <div style="display:none" class="data-table userDetailsTable">
+                <div class="title">
+                    <ion-icon name="folder-outline"></ion-icon>
+                    <span class="text">Content</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div style="display:none" class="data-table EditUserRole">
+                <div class="title">
+                    <ion-icon name="analytics-outline"></ion-icon>
+                    <span class="text">Analytics</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                </div>
+            </div>
+
+           <!-- Customer Purchase -->
+<div style="display:none" class="data-table VehicleDetails">
+    <div class="title">
+        <ion-icon name="bag-outline"></ion-icon>
+        <span class="text">Products</span>
+    </div>
+    <div>
+        <!-- NEW: Purchase Products & Cart Section -->
+        <div class="product-cart-container">
+            <!-- Purchase Products Section -->
+            <div class="products-section">
+                <div class="section-header">
+                    <h2>Purchase Products</h2>
+                    <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+                </div>
+                <div class="products-container">
+                    <div class="product-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                        <button onclick="addToCart('Product Name', 100)">Add to cart</button>
+                    </div>
+                    <div class="product-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                        <button onclick="addToCart('Product Name', 150)">Add to cart</button>
+                    </div>
+                    <div class="product-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                        <button onclick="addToCart('Product Name', 200)">Add to cart</button>
+                    </div>
+                    <div class="product-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                        <button onclick="addToCart('Product Name', 250)">Add to cart</button>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Cart Section -->
+             <div class="cart-section">
+                <h2>Cart</h2>
+                <div class="cart-container">
+                    <div class="cart-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                    </div>
+                    <div class="cart-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                    </div>
+                    <div class="cart-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                    </div>
+                    <div class="cart-box">
+                        <img src="placeholder.png" alt="Product">
+                        <p>Product Name</p>
+                    </div>
+                </div>
+                <div class="total-container">
+                    <strong>Total: ₱<span id="total">0</span></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+            <!-- Add Product -->
+            <div style="display:none" class="data-table downloads">
+                <div class="title">
+                    <ion-icon name="add-outline"></ion-icon>
+                    <span class="text">Description</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="index.js"></script>
+    <script src="logoutindex.js" type="module"></script>
+    
+    <!-- Sources for icons -->
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+    
+</body>
+
+</html>
