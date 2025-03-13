@@ -1,6 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
-import { addDoc, collection, getFirestore } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { addDoc, collection, getFirestore, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCzJLBy4fu8fIh0WmnjC9dKG_m1t-wI-Oc",
@@ -14,42 +14,35 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
-console.log("🚀 addproduct.js loaded!");
+
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("✅ DOM fully loaded!");
-
     const form = document.querySelector("#addProductForm form");
-      if (!form) {
-        console.error("❌ Form element NOT found!");
-        alert("❌ Form NOT found in DOM!");
-        return;
-    } else {
-        console.log("✅ Form found successfully!");
-    } 
 
-    // Ensure auth state is detected properly
     onAuthStateChanged(auth, (user) => {
         if (!user) {
-          console.warn("⚠ No user detected, redirecting...");
-          alert("⚠ You are not logged in!");
-          window.location.href = "login.html";
-          return;
+            console.warn("⚠ No user detected, redirecting...");
+            alert("⚠ You are not logged in!");
+            window.location.href = "login.html";
+            return;
         }
 
-        console.log("✅ Authenticated as:", user.email);
+        // Load recent products
+        loadRecentProducts(user.uid);
 
         form.addEventListener("submit", async (event) => {
-            event.preventDefault(); // Prevent page refresh
+            event.preventDefault();
 
             const productName = document.getElementById("productName").value.trim();
-            const category = document.getElementById("productCategory").value; // ✅ Get selected category
+            const category = document.getElementById("productCategory").value;
             const price = parseFloat(document.getElementById("productPrice").value) || 0;
             const quantity = parseInt(document.getElementById("productQuantity").value) || 0;
+            const expirationDate = document.getElementById("expirationDate").value;
+            const lowStockThreshold = parseInt(document.getElementById("lowStockThreshold").value) || 0;
             const description = document.getElementById("productDescription").value.trim();
             const date = new Date().toISOString();
-            console.log("📝 Form submit event triggered!"); 
-            if (!productName || !category || !price || !quantity || !description) {
-                alert("❌ Please fill out all fields.");
+
+            if (!productName || !category || !price || !quantity || !lowStockThreshold) {
+                alert("❌ Please fill out all required fields.");
                 return;
             }
 
@@ -59,6 +52,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     category: category,
                     price: price,
                     quantity: quantity,
+                    expirationDate: expirationDate || null,
+                    lowStockThreshold: lowStockThreshold,
                     description: description,
                     date: date
                 });
@@ -66,7 +61,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("✅ Product added successfully!");
                 alert("✅ Product added successfully!");
 
-                form.reset(); // Clear form fields after successful submission
+                form.reset(); // Clear form fields
+                loadRecentProducts(user.uid); // Refresh recent products
             } catch (error) {
                 console.error("❌ Error adding product:", error);
                 alert("❌ Failed to add product.");
@@ -74,3 +70,34 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+
+async function loadRecentProducts(userId) {
+    const recentProductsBody = document.getElementById("recentProductsBody");
+    recentProductsBody.innerHTML = ""; // Clear existing content
+
+    try {
+        const q = query(collection(db, "users", userId, "products"), orderBy("date", "desc"), limit(5));
+        const querySnapshot = await getDocs(q);
+
+        querySnapshot.forEach((doc) => {
+            const product = doc.data();
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${product.name}</td>
+                <td>${product.category}</td>
+                <td>₱${product.price.toFixed(2)}</td>
+                <td>${product.quantity}</td>
+                <td class="actions">
+                    <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
+                    <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
+                </td>
+            `;
+
+            recentProductsBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("❌ Error loading recent products:", error);
+        alert("❌ Failed to load recent products.");
+    }
+}

@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Management System - Add Product</title>
+    <title>Add Product</title>
     <link rel="stylesheet" href="/Assets/addproduct.css">
+    <link rel="icon" type="png" href="/Assets/bizlogo.png">
     <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/esm/ionicons.min.js"></script>
-    <script type="module"src="addproduct.js"></script>
+    <script type="module" src="addproduct.js"></script>
     <script type="module" src="logoutindex.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
@@ -16,7 +17,7 @@
     <nav>
         <div class="logo">
             <div class="logo-image">
-                <img src="bizlogo.png" alt="Logo">
+                <img src="/Assets/bizlogo.png" alt="Logo">
             </div>
         </div>
         <ul class="menu-items">
@@ -50,10 +51,22 @@
                     <span class="links">Add Product</span>
                 </a>
             </li>
+            <li>
+                <a href="deleteproduct.html">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    <span class="links">Delete Product</span>
+                </a>
+            </li>
+            <li>
+                <a href="modproduct.html">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    <span class="links">Modify Product</span>
+                </a>
+            </li>
             <li style="margin-top: auto;">
                 <a class="profile" href="#">
                     <ion-icon name="person-circle-outline"></ion-icon>
-                    <span  class="links">Profile</span>
+                    <span class="links">Profile</span>
                 </a>
             </li>
             <li>
@@ -124,27 +137,39 @@
             <form>
                 <div class="form-group">
                     <label for="productName">Product Name</label>
-                    <input type="text" id="productName" name="productName" placeholder="Enter product name">
+                    <input type="text" id="productName" name="productName" placeholder="Enter product name" required>
                 </div>
                 <div class="form-group">
                     <label for="productCategory">Category</label>
-                    <select id="productCategory" name="productCategory">
+                    <select id="productCategory" name="productCategory" required>
                         <option value="">Select category</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="food">Food</option>
-                        <option value="other">Other</option>
+                        <option value="Food & Beverages">Food & Beverages</option>
+                        <option value="Personal Care & Hygiene">Personal Care & Hygiene</option>
+                        <option value="Household Essentials">Household Essentials</option>
+                        <option value="Tobacco & Alcohol">Tobacco & Alcohol</option>
+                        <option value="School & Office Supplies">School & Office Supplies</option>
+                        <option value="Clothing">Clothing</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Others">Others</option>
                     </select>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="productPrice">Price (₱)</label>
-                        <input type="number" id="productPrice" name="productPrice" placeholder="0.00">
+                        <input type="number" id="productPrice" name="productPrice" placeholder="0.00" required>
                     </div>
                     <div class="form-group">
                         <label for="productQuantity">Quantity</label>
-                        <input type="number" id="productQuantity" name="productQuantity" placeholder="0">
+                        <input type="number" id="productQuantity" name="productQuantity" placeholder="0" required>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="expirationDate">Expiration Date</label>
+                    <input type="date" id="expirationDate" name="expirationDate">
+                </div>
+                <div class="form-group">
+                    <label for="lowStockThreshold">Low Stock Threshold</label>
+                    <input type="number" id="lowStockThreshold" name="lowStockThreshold" placeholder="Set low stock alert" required>
                 </div>
                 <div class="form-group">
                     <label for="productDescription">Description</label>
@@ -173,7 +198,7 @@
             </div>
             <h2>Recent Products</h2>
         </div>
-
+        
         <div class="products-table">
             <table>
                 <thead>
@@ -185,37 +210,8 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>Product Name 1</td>
-                        <td>Electronics</td>
-                        <td>₱1,299.00</td>
-                        <td>15</td>
-                        <td class="actions">
-                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
-                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Prod    uct Name 2</td>
-                        <td>Clothing</td>
-                        <td>₱599.00</td>
-                        <td>32</td>
-                        <td class="actions">
-                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
-                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Product Name 3</td>
-                        <td>Food</td>
-                        <td>₱199.50</td>
-                        <td>50</td>
-                        <td class="actions">
-                            <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
-                            <button class="btn-delete"><ion-icon name="trash-outline"></ion-icon></button>
-                        </td>
-                    </tr>
+                <tbody id="recentProductsBody">
+                    <!-- Recent products will be dynamically inserted here -->
                 </tbody>
             </table>
         </div>
