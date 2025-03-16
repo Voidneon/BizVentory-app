@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, getFirestore, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCzJLBy4fu8fIh0WmnjC9dKG_m1t-wI-Oc",
@@ -86,6 +86,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 const productDoc = await getDoc(productRef);
                 const product = productDoc.data();
 
+                // Ensure batches field exists and is an array
+                if (!product.batches) {
+                    product.batches = [];
+                }
+
                 if (action === "increase") {
                     // Add new batch
                     await updateDoc(productRef, {
@@ -170,7 +175,12 @@ async function loadBatches(userId, productId) {
         const productDoc = await getDoc(productRef);
         const product = productDoc.data();
 
-        if (product.batches && product.batches.length > 0) {
+        // Ensure batches field exists and is an array
+        if (!product.batches) {
+            product.batches = [];
+        }
+
+        if (product.batches.length > 0) {
             product.batches.forEach(batch => {
                 const option = document.createElement("option");
                 option.value = batch.batchID;

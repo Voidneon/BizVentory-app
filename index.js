@@ -98,8 +98,8 @@ function saveCart() {
     localStorage.setItem("cart", JSON.stringify(cart));
 }
 
-// Function to filter products based on search input
-function filterProducts() {
+// Make filterProducts globally accessible
+window.filterProducts = function () {
     let searchQuery = document.getElementById("search").value.toLowerCase();
     let products = document.querySelectorAll(".product-box");
 
@@ -107,7 +107,7 @@ function filterProducts() {
         let productName = product.querySelector("p").textContent.toLowerCase();
         product.style.display = productName.includes(searchQuery) ? "block" : "none";
     });
-}
+};
 
 // ✅ Scroll Functionality for Purchase Products and Cart
 function enableScroll(containerSelector) {
