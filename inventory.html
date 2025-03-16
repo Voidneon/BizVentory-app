@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modify Product</title>
+    <title>Inventory Management</title>
     <link rel="stylesheet" href="/Assets/addproduct.css">
     <link rel="icon" type="png" href="/Assets/bizlogo.png">
     <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/esm/ionicons.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
-    <script type="module" src="modproduct.js"></script>
+    <script type="module" src="inventory.js"></script>
     <script type="module" src="logoutindex.js"></script>
     <style>
         /* Popup styling */
@@ -36,6 +36,11 @@
             float: right;
             cursor: pointer;
             font-size: 24px;
+        }
+
+        /* Batch selection styling */
+        #batchSelection {
+            display: none; /* Hidden by default */
         }
     </style>
 </head>
@@ -65,15 +70,15 @@
                     <span class="links">Delete Product</span>
                 </a>
             </li>
-            <li class="active">
+            <li>
                 <a href="modproduct.html">
                     <ion-icon name="create-outline"></ion-icon>
                     <span class="links">Modify Product</span>
                 </a>
             </li>
-            <li>
+            <li class="active">
                 <a href="inventory.html">
-                    <ion-icon name="grid-outline"></ion-icon>
+                    <ion-icon name="cube-outline"></ion-icon>
                     <span class="links">Inventory</span>
                 </a>
             </li>
@@ -95,71 +100,75 @@
     <div class="dashboard">
         <div class="header">
             <div class="header-icon">
-                <ion-icon name="create-outline"></ion-icon>
+                <ion-icon name="cube-outline"></ion-icon>
             </div>
-            <h1>Modify Product</h1>
+            <h1>Inventory Management</h1>
+        </div>
+
+        <div class="section-header">
+            <div class="section-icon">
+                <ion-icon name="search-outline"></ion-icon>
+            </div>
+            <h2>Search Products</h2>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="searchProduct" placeholder="Search by product name">
         </div>
 
         <div class="section-header">
             <div class="section-icon">
                 <ion-icon name="list-outline"></ion-icon>
             </div>
-            <h2>Products by Category</h2>
+            <h2>Products</h2>
         </div>
 
-        <div id="productsByCategory" class="products-table">
-            <!-- Products will be dynamically inserted here by category -->
+        <div id="productsTable" class="products-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productsBody">
+                    <!-- Products will be dynamically inserted here -->
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Popup Form for Modifying Product -->
-    <div id="modifyProductPopup" class="popup">
+    <!-- Popup for Managing Stock -->
+    <div id="manageStockPopup" class="popup">
         <div class="popup-content">
             <span class="close-popup">&times;</span>
-            <h3>Modify Product</h3>
-            <form id="modifyProductForm">
+            <h3>Manage Stock</h3>
+            <form id="manageStockForm">
                 <div class="form-group">
-                    <label for="modifyProductName">Product Name</label>
-                    <input type="text" id="modifyProductName" name="modifyProductName" required>
-                </div>
-                <div class="form-group">
-                    <label for="modifyProductCategory">Category</label>
-                    <select id="modifyProductCategory" name="modifyProductCategory" required>
-                        <option value="">Select category</option>
-                        <option value="Food & Beverages">Food & Beverages</option>
-                        <option value="Personal Care & Hygiene">Personal Care & Hygiene</option>
-                        <option value="Household Essentials">Household Essentials</option>
-                        <option value="Tobacco & Alcohol">Tobacco & Alcohol</option>
-                        <option value="School & Office Supplies">School & Office Supplies</option>
-                        <option value="Clothing">Clothing</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Others">Others</option>
+                    <label for="stockAction">Action</label>
+                    <select id="stockAction" name="stockAction" required>
+                        <option value="">Select action</option>
+                        <option value="increase">Increase Stock</option>
+                        <option value="decrease">Decrease Stock</option>
                     </select>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="modifyProductPrice">Price (₱)</label>
-                        <input type="number" id="modifyProductPrice" name="modifyProductPrice" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="modifyProductQuantity">Quantity</label>
-                        <input type="number" id="modifyProductQuantity" name="modifyProductQuantity" required>
-                    </div>
-                </div>
                 <div class="form-group">
-                    <label for="modifyExpirationDate">Expiration Date</label>
-                    <input type="date" id="modifyExpirationDate" name="modifyExpirationDate">
+                    <label for="stockQuantity">Quantity</label>
+                    <input type="number" id="stockQuantity" name="stockQuantity" required>
                 </div>
-                <div class="form-group">
-                    <label for="modifyLowStockThreshold">Low Stock Threshold</label>
-                    <input type="number" id="modifyLowStockThreshold" name="modifyLowStockThreshold" required>
+                <div id="batchSelection" class="form-group">
+                    <label for="batchSelect">Select Batch</label>
+                    <select id="batchSelect" name="batchSelect"></select>
                 </div>
-                <div class="form-group">
-                    <label for="modifyProductDescription">Description</label>
-                    <textarea id="modifyProductDescription" name="modifyProductDescription"></textarea>
+                <div id="expirationDateField" class="form-group">
+                    <label for="batchExpirationDate">Expiration Date</label>
+                    <input type="date" id="batchExpirationDate" name="batchExpirationDate">
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn-save">Save Changes</button>
+                    <button type="submit" class="btn-save">Confirm</button>
                     <button type="button" class="btn-cancel close-popup">Cancel</button>
                 </div>
             </form>

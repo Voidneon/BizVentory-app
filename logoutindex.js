@@ -33,19 +33,11 @@ document.addEventListener("DOMContentLoaded", function () {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             profileName.textContent = "Loading...";
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.data();
-            console.log("✅ Logged in as:", user.email);
-            await typeWriter(`${userData.firstName} ${userData.lastName}`, profileName);
-            
-            // While fetching name
-
-
             try {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    profileName.textContent = `${userData.firstName} ${userData.lastName}`;
+                    await typeWriter(`${userData.firstName} ${userData.lastName}`, profileName);
                     console.log("✅ Name fetched:", `${userData.firstName} ${userData.lastName}`);
                 } else {
                     profileName.textContent = "Admin User";
@@ -57,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             console.log("❌ No User Logged In");
             window.location.href = "login.html"; // Redirect to Login
-        }       
+        }
     });
 
     // Logout System

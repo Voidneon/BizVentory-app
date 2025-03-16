@@ -236,3 +236,239 @@ nav .menu-items li.active a ion-icon {
     color: #e0e0e0;
 
 }
+
+
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.chart-container {
+    flex: 1;
+    max-width: 500px;
+    height: 300px;
+}
+
+
+/* Popup styling */
+.transaction-popup {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Darken background */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.transaction-popup.active {
+    display: flex; /* Show popup when active */
+}
+
+.popup-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: auto; /* Adjust width based on content */
+    max-width: 90%; /* Prevent it from being too wide */
+    max-height: 80vh; /* Prevent it from being too tall */
+    overflow-y: auto; /* Add scroll if content exceeds height */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.popup-content h2 {
+    margin-top: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.popup-content p {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.popup-content table {
+    width: 100%;
+    margin: 10px 0;
+    border-collapse: collapse;
+}
+
+.popup-content th, .popup-content td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+    font-size: 14px;
+}
+
+.popup-content th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.popup-content button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.popup-content button:hover {
+    background: #0056b3;
+}
+
+.close-popup {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+    color: #333;
+}
+
+.close-popup:hover {
+    color: #000;
+}
+
+
+/*Transactions*/
+
+/* Transactions Log Table */
+.transactions-table {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.transactions-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.transactions-table th, .transactions-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e1bee7;
+}
+
+.transactions-table th {
+    background-color: #f3e5f5;
+    color: #4a148c;
+    font-weight: 600;
+}
+
+.transactions-table tr:nth-child(even) {
+    background-color: #faf5fb;
+}
+
+.transactions-table tr:hover {
+    background-color: #f5eef7;
+}
+
+.transactions-table .actions {
+    display: flex;
+    gap: 10px;
+}
+
+.transactions-table .btn-view {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    color: #2196f3;
+}
+
+.transactions-table .btn-view:hover {
+    background-color: #f3e5f5;
+}
+
+
+/* Products Table */
+.products-table {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e1bee7;
+}
+
+th {
+    background-color: #f3e5f5;
+    color: #4a148c;
+    font-weight: 600;
+}
+
+tr:nth-child(even) {
+    background-color: #faf5fb;
+}
+
+tr:hover {
+    background-color: #f5eef7;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-edit, .btn-delete {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-edit {
+    color: #2196f3;
+}
+
+.btn-delete {
+    color: #f44336;
+}
+
+.btn-edit:hover, .btn-delete:hover {
+    background-color: #f3e5f5;
+}
+
+.profile{
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px);
+    justify-content: space-between;
+
+}
+@media (max-width: 768px) {
+    .charts-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .chart-container {
+        max-width: 100%;
+    }
+}

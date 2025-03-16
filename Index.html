@@ -9,6 +9,41 @@
     <link rel="stylesheet" href="/Assets/style.css">
     <link rel="icon" type="png" href="/Assets/bizlogo.png">
     <title>Dashboard</title>
+
+    <style>
+        /* Notifications Section Styling */
+        .notifications-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .notifications-section h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+        .notification {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: #f9f9f9;
+            border-left: 4px solid #ff4757;
+        }
+        .notification.low-stock {
+            border-left-color: #ffa502;
+        }
+        .notification.expiring {
+            border-left-color: #2ed573;
+        }
+        .notification.out-of-stock {
+            border-left-color: #ff4757;
+        }
+        .notification.expired {
+            border-left-color: #57606f;
+        }
+    </style>
 </head>
 
 <body>
@@ -63,6 +98,13 @@
                         <span class="links">Modify Product</span>
                     </a>
                 </li>
+                <li>
+                    <a href="inventory.html">
+                        <ion-icon name="grid-outline"></ion-icon>
+                        <span class="links">Inventory</span>
+                    </a>
+                </li>
+
             </ul>
             <ul class="bottom-link">
                 <li>
@@ -101,9 +143,10 @@
                     </div>
                     <div class="box box3">
                         <ion-icon name="bar-chart-outline"></ion-icon>
-                        <span class=    ext">Sales Report</span>
+                        <span class="text">Sales Report</span>
                         <span class="number">1209</span>
                     </div>
+
                     <div class="box box4">
                         <ion-icon name="cart-outline"></ion-icon>
                         <span class="text">Customer Purchase</span>
@@ -111,8 +154,13 @@
                     </div>
                 </div> 
             </div>
-            
-
+            <!-- Notifications Section -->
+            <div class="notifications-section">
+                <h2>Notifications</h2>
+                <div id="notificationsContainer">
+                    <!-- Notifications will be dynamically inserted here -->
+                </div>
+            </div>
             <!-- Recent Activities -->
             <div class="data-table activityTable">
                 <div class="title">
@@ -121,9 +169,24 @@
                 </div>
                 <div>
                     <!-- Enter any table or section here -->
+                    <div class="products-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentProductsBody">
+                                <!-- Recent products will be dynamically inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-
             
             <!-- Content -->
             <div style="display:none" class="data-table userDetailsTable">
@@ -131,89 +194,68 @@
                     <ion-icon name="folder-outline"></ion-icon>
                     <span class="text">Content</span>
                 </div>
-                <div>
-                    <!-- Enter any table or section here -->
+                <div class="transactions-table">
+                    <!-- Transactions table will be dynamically inserted here -->
                 </div>
             </div>
-
+            
             <!-- Analytics -->
             <div style="display:none" class="data-table EditUserRole">
                 <div class="title">
                     <ion-icon name="analytics-outline"></ion-icon>
                     <span class="text">Analytics</span>
                 </div>
-                <div>
-                    <!-- Enter any table or section here -->
-                </div>
-            </div>
-
-           <!-- Customer Purchase -->
-<div style="display:none" class="data-table VehicleDetails">
-    <div class="title">
-        <ion-icon name="bag-outline"></ion-icon>
-        <span class="text">Products</span>
-    </div>
-    <div>
-        <!-- NEW: Purchase Products & Cart Section -->
-        <div class="product-cart-container">
-            <!-- Purchase Products Section -->
-            <div class="products-section">
-                <div class="section-header">
-                    <h2>Purchase Products</h2>
-                    <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
-                </div>
-                <div class="products-container">
-                    <div class="product-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                        <button onclick="addToCart('Product Name', 100)">Add to cart</button>
+                <div class="charts-container">
+                    <!-- Pie Chart for Product Categories -->
+                    <div class="chart-container">
+                        <canvas id="categoryPieChart"></canvas>
                     </div>
-                    <div class="product-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                        <button onclick="addToCart('Product Name', 150)">Add to cart</button>
+            
+                    <!-- Bar Chart for Product Quantities -->
+                    <div class="chart-container">
+                        <canvas id="quantityBarChart"></canvas>
                     </div>
-                    <div class="product-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                        <button onclick="addToCart('Product Name', 200)">Add to cart</button>
-                    </div>
-                    <div class="product-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                        <button onclick="addToCart('Product Name', 250)">Add to cart</button>
+            
+                    <!-- Line Chart for Product Expiry -->
+                    <div class="chart-container">
+                        <canvas id="expiryLineChart"></canvas>
                     </div>
                 </div>
             </div>
 
-             <!-- Cart Section -->
-             <div class="cart-section">
-                <h2>Cart</h2>
-                <div class="cart-container">
-                    <div class="cart-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                    </div>
-                    <div class="cart-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                    </div>
-                    <div class="cart-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                    </div>
-                    <div class="cart-box">
-                        <img src="placeholder.png" alt="Product">
-                        <p>Product Name</p>
-                    </div>
-                </div>
-                <div class="total-container">
-                    <strong>Total: ₱<span id="total">0</span></strong>
-                </div>
+            <!-- Customer Purchase -->
+            <div style="display:none" class="data-table VehicleDetails">
+            <div class="title">
+                <ion-icon name="bag-outline"></ion-icon>
+                <span class="text">Products</span>
+            </div>
+            <div>
+                <!-- NEW: Purchase Products & Cart Section -->
+                <div class="product-cart-container">
+                    <!-- Purchase Products Section -->
+                    <div class="product-cart-container">
+                        <!-- Purchase Products Section -->
+                        <div class="products-section">
+                            <div class="section-header">
+                                <h2>Purchase Products</h2>
+                                <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+                            </div>
+                            <div class="products-container">
+                                <!-- Products will be dynamically inserted here -->
+                            </div>
+                        </div>
+                    
+                        <!-- Cart Section -->
+                        <div class="cart-section">
+                            <div class="total-container">
+                                <strong>Total: ₱<span id="total">0</span></strong>
+                            </div>
+                            <div class="cart-container"></div>
+                        </div>
+                    </div>  
             </div>
         </div>
-    </div>
-</div>
+        
 
 
             <!-- Add Product -->
@@ -229,9 +271,17 @@
         </div>
     </section>
 
-    <script src="index.js"></script>
-    <script src="logoutindex.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="cart.js"></script>
+
     
+
+    <script src="cart.js" type="module"></script>
+    <script src="index.js" type="module"></script>
+    <script src="logoutindex.js" type="module"></script>
+
     <!-- Sources for icons -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
