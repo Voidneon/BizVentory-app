@@ -1,291 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!--<link rel="stylesheet" href="/  Assets/style.css">-->
-    <link rel="stylesheet" href="/Assets/style.css">
+    <title>Bizventory Login</title>
+    <link rel="stylesheet" href="Assets/login.css">
     <link rel="icon" type="png" href="/Assets/bizlogo.png">
-    <title>Dashboard</title>
-
-    <style>
-        /* Notifications Section Styling */
-        .notifications-section {
-            margin-top: 20px;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .notifications-section h2 {
-            margin-bottom: 15px;
-            font-size: 18px;
-            color: #333;
-        }
-        .notification {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            background: #f9f9f9;
-            border-left: 4px solid #ff4757;
-        }
-        .notification.low-stock {
-            border-left-color: #ffa502;
-        }
-        .notification.expiring {
-            border-left-color: #2ed573;
-        }
-        .notification.out-of-stock {
-            border-left-color: #ff4757;
-        }
-        .notification.expired {
-            border-left-color: #57606f;
-        }
-    </style>
+    <script type="module" src="index.js" defer></script>
+    <script type="module" src="firebaseauth.js" defer></script>
 </head>
-
 <body>
-    
-    <nav>
-        <div class="logo">
-            <div class="logo-image">
-                <img src="/Assets/bizlogo.png" alt="">
-            </div>
+
+    <!-- From Uiverse.io  --> 
+    <div class="pattern-container"></div>
+
+    <div class="login-container">
+        <div class="login-box">
+            <div id="signInMessage" class="messageDiv" style="display:none;"></div>
+            <img src="/Assets/bizlogo.png" alt="Bizventory Logo" class="app-logo">
+            <h2 id="form-title">Login To Bizventory</h2>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <p class="forgot-password"><a href="#" id="toggle-forgot-password">Forgot Password?</a></p>
+                <button type="submit">Log In</button>
+            </form>
+
+            <!-- SIGN UP FORM (Hidden by Default) -->
+            <form id="signup-form" style="display: none;">
+                <div id="signUpMessage" class="messageDiv" style="display:none;"></div>
+                <input type="text" id="signup-firstname" placeholder="First Name" required>
+                <input type="text" id="signup-lastname" placeholder="Last Name" required>
+                <input type="email" id="signup-email" placeholder="Email" required>
+                <input type="password" id="signup-password" placeholder="Password" required>
+                <input type="password" id="confirm-password" placeholder="Confirm Password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+
+            <!-- FORGOT PASSWORD FORM (Hidden by Default) -->
+            <form id="forgot-password-form" style="display: none;">
+                <div id="forgotPasswordMessage" class="messageDiv" style="display:none;"></div>
+                <p class="subtext">Please enter the email address associated with your account, and we'll send you a link to reset your password.</p>
+                <input type="email" id="forgot-password-email" placeholder="Enter email address" required>
+                <button type="submit">Reset Password</button>
+                
+                <!-- Back to Login Link -->
+                <p class="back-to-login"><a href="#" id="toggle-back-to-login">Back to Login</a></p>
+                
+                <!-- Sign Up Link -->
+                <p class="account">
+                    <span>Don't have an account? <a href="#" id="toggle-signup-from-forgot">Sign Up</a></span>
+                </p>
+            </form>
+
+            <!-- TOGGLE SIGNUP & LOGIN -->
+            <p class="account">
+                <span id="toggle-form">Don't have an account? <a href="#">Sign Up</a></span>
+            </p>
         </div>
-        <div class="menu-items">
-            <ul class="navLinks">
-                <li class="navList active">
-                    <a href="#">
-                        <ion-icon name="home-outline"></ion-icon>
-                        <span class="links">Dashboard</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="#">
-                        <ion-icon name="folder-outline"></ion-icon>
-                        <span class="links">Content</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="#">
-                        <ion-icon name="analytics-outline"></ion-icon>
-                        <span class="links">Analytics</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="#">
-                        <ion-icon name="person-add-outline"></ion-icon>
-                        <span class="links">Customer Purchase</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="addproduct.html">
-                        <ion-icon name="add-circle-outline"></ion-icon>
-                        <span class="links">Add Product</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="deleteproduct.html">
-                        <ion-icon name="trash-outline"></ion-icon>
-                        <span class="links">Delete Product</span>
-                    </a>
-                </li>
-                <li class="navList">
-                    <a href="modproduct.html">
-                        <ion-icon name="create-outline"></ion-icon>
-                        <span class="links">Modify Product</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="inventory.html">
-                        <ion-icon name="cube-outline"></ion-icon>
-                        <span class="links">Inventory</span>
-                    </a>
-                </li>
-
-            </ul>
-            <ul class="bottom-link">
-                <li>
-                    <a class="profile" href="#">
-                        <ion-icon name="person-circle-outline"></ion-icon>
-                        <span name="profile" class="links">Profile</span>
-                    </a>
-                </li>
-                <li>
-                        <a href="#logout" id="logout">
-                            <ion-icon name="log-out-outline"></ion-icon>
-                            <span class="links">Logout</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-    <section class="dashboard">
-        <div class="container"> 
-            <div class="overview">
-                <div class="title">
-                    <ion-icon name="accessibility-outline"></ion-icon>
-                    <span class="text">Dashboard</span>
-                </div>
-                <div class="boxes">
-                    <div class="box box1">
-                        <ion-icon name="storefront-outline"></ion-icon>
-                        <span class="text">Manage Inventory</span>
-                        <span class="number">18345</span>
-                    </div>
-                    <div class="box box2">
-                        <ion-icon name="people-outline"></ion-icon>
-                        <span class="text">Manage Transaction</span>
-                        <span class="number">2745</span>
-                    </div>
-                    <div class="box box3">
-                        <ion-icon name="bar-chart-outline"></ion-icon>
-                        <span class="text">Sales Report</span>
-                        <span class="number">1209</span>
-                    </div>
-
-                    <div class="box box4">
-                        <ion-icon name="cart-outline"></ion-icon>
-                        <span class="text">Customer Purchase</span>
-                        <span class="number">123</span>
-                    </div>
-                </div> 
-            </div>
-            <!-- Notifications Section -->
-            <div class="notifications-section">
-                <h2>Notifications</h2>
-                <div id="notificationsContainer">
-                    <!-- Notifications will be dynamically inserted here -->
-                </div>
-            </div>
-            <!-- Recent Activities -->
-            <div class="data-table activityTable">
-                <div class="title">
-                    <ion-icon name="time-outline"></ion-icon>
-                    <span class="text">Recent Activities</span>
-                </div>
-                <div>
-                    <!-- Enter any table or section here -->
-                    <div class="products-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Product Name</th>
-                                    <th>Category</th>
-                                    <th>Price</th>
-                                    <th>Quantity</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recentProductsBody">
-                                <!-- Recent products will be dynamically inserted here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Content -->
-            <div style="display:none" class="data-table userDetailsTable">
-                <div class="title">
-                    <ion-icon name="folder-outline"></ion-icon>
-                    <span class="text">Content</span>
-                </div>
-                <div class="transactions-table">
-                    <!-- Transactions table will be dynamically inserted here -->
-                </div>
-            </div>
-            
-            <!-- Analytics -->
-            <div style="display:none" class="data-table EditUserRole">
-                <div class="title">
-                    <ion-icon name="analytics-outline"></ion-icon>
-                    <span class="text">Analytics</span>
-                </div>
-                <div class="charts-container">
-                    <!-- Pie Chart for Product Categories -->
-                    <div class="chart-container">
-                        <canvas id="categoryPieChart"></canvas>
-                    </div>
-            
-                    <!-- Bar Chart for Product Quantities -->
-                    <div class="chart-container">
-                        <canvas id="quantityBarChart"></canvas>
-                    </div>
-            
-                    <!-- Line Chart for Product Expiry -->
-                    <div class="chart-container">
-                        <canvas id="expiryLineChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Customer Purchase -->
-            <div style="display:none" class="data-table VehicleDetails">
-            <div class="title">
-                <ion-icon name="bag-outline"></ion-icon>
-                <span class="text">Products</span>
-            </div>
-            <div>
-                <!-- NEW: Purchase Products & Cart Section -->
-                <div class="product-cart-container">
-                    <!-- Purchase Products Section -->
-                    <div class="product-cart-container">
-                        <!-- Purchase Products Section -->
-                        <div class="products-section">
-                            <div class="section-header">
-                                <h2>Purchase Products</h2>
-                                <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
-                            </div>
-                            <div class="products-container">
-                                <!-- Products will be dynamically inserted here -->
-                            </div>
-                        </div>
-                    
-                        <!-- Cart Section -->
-                        <div class="cart-section">
-                            <div class="total-container">
-                                <strong>Total: ₱<span id="total">0</span></strong>
-                            </div>
-                            <div class="cart-container"></div>
-                        </div>
-                    </div>  
-            </div>
-        </div>
-        
-
-
-            <!-- Add Product -->
-            <div style="display:none" class="data-table downloads">
-                <div class="title">
-                    <ion-icon name="add-outline"></ion-icon>
-                    <span class="text">Description</span>
-                </div>
-                <div>
-                    <!-- Enter any table or section here -->
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="cart.js"></script>
-
-    
-
-    <script src="cart.js" type="module"></script>
-    <script src="index.js" type="module"></script>
-    <script src="logoutindex.js" type="module"></script>
-
-    <!-- Sources for icons -->
-    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-    
+    </div>
 </body>
-<!--Have fun!-->
 </html>
