@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, getFirestore, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCzJLBy4fu8fIh0WmnjC9dKG_m1t-wI-Oc",
@@ -46,12 +46,10 @@ document.addEventListener("DOMContentLoaded", function () {
             const productName = document.getElementById("modifyProductName").value.trim();
             const category = document.getElementById("modifyProductCategory").value;
             const price = parseFloat(document.getElementById("modifyProductPrice").value) || 0;
-            const quantity = parseInt(document.getElementById("modifyProductQuantity").value) || 0;
-            const expirationDate = document.getElementById("modifyExpirationDate").value;
             const lowStockThreshold = parseInt(document.getElementById("modifyLowStockThreshold").value) || 0;
             const description = document.getElementById("modifyProductDescription").value.trim();
 
-            if (!productName || !category || !price || !quantity || !lowStockThreshold) {
+            if (!productName || !category || !price || !lowStockThreshold) {
                 alert("❌ Please fill out all required fields.");
                 return;
             }
@@ -61,8 +59,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     name: productName,
                     category: category,
                     price: price,
-                    quantity: quantity,
-                    expirationDate: expirationDate || null,
                     lowStockThreshold: lowStockThreshold,
                     description: description
                 });
@@ -114,7 +110,6 @@ async function loadProductsByCategory(userId) {
                     <tr>
                         <th>Product Name</th>
                         <th>Price</th>
-                        <th>Quantity</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -123,7 +118,6 @@ async function loadProductsByCategory(userId) {
                         <tr>
                             <td>${product.name}</td>
                             <td>₱${product.price.toFixed(2)}</td>
-                            <td>${product.quantity}</td>
                             <td class="actions">
                                 <button class="btn-modify" data-id="${product.id}">
                                     <ion-icon name="create-outline"></ion-icon>
@@ -154,8 +148,6 @@ async function loadProductsByCategory(userId) {
                     document.getElementById("modifyProductName").value = product.name;
                     document.getElementById("modifyProductCategory").value = product.category;
                     document.getElementById("modifyProductPrice").value = product.price;
-                    document.getElementById("modifyProductQuantity").value = product.quantity;
-                    document.getElementById("modifyExpirationDate").value = product.expirationDate || "";
                     document.getElementById("modifyLowStockThreshold").value = product.lowStockThreshold;
                     document.getElementById("modifyProductDescription").value = product.description || "";
 
