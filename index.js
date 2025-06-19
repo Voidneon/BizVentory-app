@@ -60,4 +60,36 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleForm.innerHTML = `Already have an account? <a href="#">Log In</a>`;
         toggleForm.style.display = "block"; // Show the toggle link
     });
+
+    // Handle Login Form Submission
+    loginForm.addEventListener('submit', function (e) {
+        try {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            console.log(`Attempting Login with Email: ${email}, Password: ${password}`);
+        } catch (error) {
+            alert('Invalid Credentials. Please try again.');
+        }
+    });
+
+    // Handle Sign Up Form Submission
+    signupForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const firstName = document.getElementById('signup-firstname').value;
+        const lastName = document.getElementById('signup-lastname').value;
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        console.log(`Signing up: ${firstName} ${lastName} (${email})`);
+    });
+
+    // Handle Forgot Password Form Submission
+    forgotPasswordForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const email = document.getElementById('forgot-password-email').value;
+        console.log(`Password reset requested for email: ${email}`);
+        // Add your password reset logic here (e.g., Firebase Auth sendPasswordResetEmail)
+    });
 });
