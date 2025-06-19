@@ -31,12 +31,15 @@ document.querySelectorAll(".navList").forEach(function (element) {
     });
 });
 
+
+
+
 function closePopup() {
     const popup = document.querySelector(".transaction-popup");
     if (popup) {
         popup.remove();
 }
-}   
+}
 
 // ✅ Retrieve Cart from Local Storage
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -607,3 +610,17 @@ window.closePopup = function () {
         popup.remove(); // Remove the popup from the DOM
     }
 };
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    const logoutButton = document.querySelector("#logout");
+    const profileName = document.querySelector('.profile .links'); // Target Profile Name
+
+    async function typeWriter(text, element) {
+        element.textContent = "";
+        for (let i = 0; i < text.length; i++) {
+            element.textContent += text[i];
+            await new Promise(resolve => setTimeout(resolve, 100)); // Delay per letter
+        }
+    }
+});
