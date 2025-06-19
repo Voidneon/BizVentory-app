@@ -19,7 +19,7 @@ console.log("✅ logoutindex.js running!");
 
 document.addEventListener("DOMContentLoaded", function () {
     const logoutButton = document.querySelector("#logout");
-    const profileName = document.querySelector('.profile'); // Target Profile Name
+    const profileName = document.querySelector('.profile .links'); // Target Profile Name
 
     async function typeWriter(text, element) {
         element.textContent = "";
