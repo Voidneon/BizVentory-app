@@ -2,8 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebas
 import {
     createUserWithEmailAndPassword,
     getAuth,
+    sendPasswordResetEmail,
     signInWithEmailAndPassword,
-    sendPasswordResetEmail, // Import the sendPasswordResetEmail function
 } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-auth.js";
 import { doc, getFirestore, setDoc } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
@@ -61,7 +61,7 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
     try {
         await signInWithEmailAndPassword(auth, email, password);
         alert("Login Successful!");
-        window.location.href = "index.html";
+        window.location.href = "dashboard.html";
     } catch (error) {
         alert("Invalid login credentials!");
         return error;
