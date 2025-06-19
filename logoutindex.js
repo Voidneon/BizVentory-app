@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         } else {
             console.log("❌ No User Logged In");
-            window.location.href = "login.html"; // Redirect to Login
+            window.location.href = "index.html"; // Redirect to Login
         }
     });
 
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
             try {
                 await signOut(auth);
                 console.log("✅ User signed out");
-                window.location.href = "login.html";
+                window.location.href = "index.html";
             } catch (error) {
                 console.error("❌ Sign-out error:", error);
             }

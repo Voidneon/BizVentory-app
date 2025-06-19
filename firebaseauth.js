@@ -45,7 +45,7 @@ document.getElementById("signup-form").addEventListener("submit", async (event) 
         await setDoc(doc(db, "users", user.uid), { firstName, lastName, email, password });
 
         alert("Account Created Successfully!");
-        window.location.href = "login.html";
+        window.location.href = "index.html";
     } catch (error) {
         alert(error.message);
     }
