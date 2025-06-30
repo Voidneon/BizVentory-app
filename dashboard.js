@@ -528,54 +528,6 @@ function renderExpiryLineChart(products) {
     });
 }
 
-
-// Make showTransactionDetails globally accessible
-window.showTransactionDetails = async function (userId, transactionId) {
-    try {
-        const transactionDoc = await getDoc(doc(db, "users", userId, "transactions", transactionId));
-        const transaction = transactionDoc.data();
-
-        const popup = document.createElement("div");
-        popup.className = "transaction-popup active"; // Add 'active' class
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>Transaction Details</h2>
-                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
-                <p><strong>Date and Time:</strong> ${transaction.transactionDate}</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item ID</th>
-                            <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${transaction.items.map(item => `
-                            <tr>
-                                <td>${item.itemId}</td>
-                                <td>${item.itemName}</td>
-                                <td>${item.quantity}</td>
-                                <td>₱${item.unitPrice.toFixed(2)}</td>
-                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-                <p><strong>Total Amount:</strong> ₱${transaction.total.toFixed(2)}</p>
-                <button onclick="closePopup()">Close</button>
-            </div>
-        `;
-
-        document.body.appendChild(popup);
-    } catch (error) {
-        console.error("❌ Error fetching transaction details:", error);
-        alert("❌ Failed to fetch transaction details.");
-    }
-};
-
 /* ====================== */
 /* RECENT PRODUCTS */
 /* ====================== */
@@ -684,7 +636,6 @@ window.closePopup = function () {
     }
 };
 
-
 /* ====================== */
 /* NAVIGATION */
 /* ====================== */
@@ -784,7 +735,6 @@ function initApp() {
             loadProductsForAnalytics(user.uid);
             loadTransactions(user.uid);
             loadRecentProducts(user.uid);
-            loadDashboardCounts(user.uid);
         } else {
             showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
             window.location.href = "login.html";
@@ -867,88 +817,6 @@ async function loadNotifications(userId) {
     } catch (error) {
         console.error("Error loading notifications:", error);
         showBubbleNotification("error", "alert-circle-outline", "Failed to load notifications.");
-    }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    const logoutButton = document.querySelector("#logout");
-    const profileName = document.querySelector('.profile .links'); // Target Profile Name
-
-    async function typeWriter(text, element) {
-        element.textContent = "";
-        for (let i = 0; i < text.length; i++) {
-            element.textContent += text[i];
-            await new Promise(resolve => setTimeout(resolve, 100)); // Delay per letter
-        }
-    }
-});
-
-
-
-async function loadTransactions(userId) {
-    const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
-    transactionsContainer.innerHTML = ""; // Clear previous content
-
-    try {
-        const q = query(collection(db, "users", userId, "transactions"), orderBy("transactionDate", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        const table = document.createElement("table");
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Transaction ID</th>
-                    <th>Date and Time</th>
-                    <th>Total Amount</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${querySnapshot.docs.map(doc => {
-                    const transaction = doc.data();
-                    return `
-                        <tr>
-                            <td>${transaction.transactionId}</td>
-                            <td>${transaction.transactionDate}</td>
-                            <td>₱${transaction.total.toFixed(2)}</td>
-                            <td class="actions">
-                                <button class="btn-view" onclick="showTransactionDetails('${userId}', '${doc.id}')">View Details</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join("")}
-            </tbody>
-        `;
-
-        transactionsContainer.appendChild(table);
-    } catch (error) {
-        console.error("❌ Error loading transactions:", error);
-        alert("❌ Failed to load transactions.");
-    }
-}
-
-
-async function loadDashboardCounts(userId) {
-    try {
-        const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
-        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
-
-        document.querySelector(".box1 .number").textContent = productsSnapshot.size;
-        document.querySelector(".box2 .number").textContent = transactionsSnapshot.size;
-
-        // Optional: Count transactions for today
-        let todayCount = 0;
-        const today = new Date().toLocaleDateString();
-        transactionsSnapshot.forEach(doc => {
-            const transactionDate = new Date(doc.data().transactionDate).toLocaleDateString();
-            if (transactionDate === today) todayCount++;
-        });
-
-        document.querySelector(".box4 .number").textContent = todayCount;
-
-    } catch (error) {
-        console.error("Error loading dashboard count:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load dashboard statistics.");
     }
 }
 
