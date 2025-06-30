@@ -1,12 +1,14 @@
-<!DOCTYPE html>
+<!DOCTYPE html>More actions
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--<link rel="stylesheet" href="/  Assets/style.css">-->
     <link rel="stylesheet" href="Assets/style.css">
     <link rel="icon" type="image/png" href="Assets/bizlogo.png">
+    <base href="/BizVentory-app/">
     <title>Dashboard</title>
 
     <style>
@@ -42,141 +44,11 @@
         .notification.expired {
             border-left-color: #57606f;
         }
-
-        /* Custom Notification System - Top Right Stacked */
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column-reverse;
-            max-height: calc(100vh - 40px);
-            overflow: hidden;
-            z-index: 1000;
-            gap: 10px;
-        }
-
-        .notification-bubble {
-            position: relative;
-            width: 300px;
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all 0.3s ease;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .notification-bubble.show {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        .notification-bubble.hide {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-
-        .notification-bubble.success {
-            background-color: #2ed573;
-        }
-
-        .notification-bubble.warning {
-            background-color: #ffa502;
-        }
-
-        .notification-bubble.error {
-            background-color: #ff4757;
-        }
-
-        .notification-bubble.info {
-            background-color: #57606f;
-        }
-
-        .notification-bubble .close-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            margin-left: 10px;
-            padding: 0;
-        }
-
-        .notification-bubble .notification-content {
-            flex-grow: 1;
-            font-size: 14px;
-        }
-
-        .notification-bubble .notification-icon {
-            margin-right: 10px;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        /* Quantity Controls */
-        .quantity-controls {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-top: 10px;
-        }
-
-        .quantity-btn {
-            width: 30px;
-            height: 30px;
-            border: none;
-            background: #6a1b9a;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .quantity-input {
-            width: 50px;
-            height: 30px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .add-to-cart-btn {
-            margin-left: 10px;
-            padding: 5px 10px;
-            background: #2ed573;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* Complete Purchase Button */
-        #completePurchaseBtn {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background: #6a1b9a;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        #completePurchaseBtn:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
-        }
     </style>
 </head>
 
 <body>
-    
+
     <nav>
         <div class="logo">
             <div class="logo-image">
@@ -259,27 +131,31 @@
                     <ion-icon name="accessibility-outline"></ion-icon>
                     <span class="text">Dashboard</span>
                 </div>
+                
                 <div class="boxes">
                     <div class="box box1">
                         <ion-icon name="storefront-outline"></ion-icon>
                         <span class="text">Manage Inventory</span>
-                        <span class="number">18345</span>
+                        <span class="number">0</span>
+                        <span class="number" id="inventoryCount">0</span>
                     </div>
+
                     <div class="box box2">
                         <ion-icon name="people-outline"></ion-icon>
                         <span class="text">Manage Transaction</span>
-                        <span class="number">2745</span>
+                        <span class="number">0</span>
                     </div>
                     <div class="box box3">
                         <ion-icon name="bar-chart-outline"></ion-icon>
                         <span class="text">Sales Report</span>
-                        <span class="number">1209</span>
+                        <span class="number">0</span>
+                        <span class="number" id="transactionCount">0</span>
                     </div>
 
                     <div class="box box4">
                         <ion-icon name="cart-outline"></ion-icon>
                         <span class="text">Customer Purchase</span>
-                        <span class="number">123</span>
+                        <span class="number">0</span>
                     </div>
                 </div> 
             </div>
@@ -316,7 +192,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Content -->
             <div style="display:none" class="data-table userDetailsTable">
                 <div class="title">
@@ -327,7 +203,7 @@
                     <!-- Transactions table will be dynamically inserted here -->
                 </div>
             </div>
-            
+
             <!-- Analytics -->
             <div style="display:none" class="data-table EditUserRole">
                 <div class="title">
@@ -339,12 +215,12 @@
                     <div class="chart-container">
                         <canvas id="categoryPieChart"></canvas>
                     </div>
-            
+
                     <!-- Bar Chart for Product Quantities -->
                     <div class="chart-container">
                         <canvas id="quantityBarChart"></canvas>
                     </div>
-            
+
                     <!-- Line Chart for Product Expiry -->
                     <div class="chart-container">
                         <canvas id="expiryLineChart"></canvas>
@@ -354,33 +230,38 @@
 
             <!-- Customer Purchase -->
             <div style="display:none" class="data-table VehicleDetails">
-                <div class="title">
-                    <ion-icon name="bag-outline"></ion-icon>
-                    <span class="text">Products</span>
-                </div>
-                <div>
+            <div class="title">
+                <ion-icon name="bag-outline"></ion-icon>
+                <span class="text">Products</span>
+            </div>
+            <div>
+                <!-- NEW: Purchase Products & Cart Section -->
+                <div class="product-cart-container">
+                    <!-- Purchase Products Section -->
                     <div class="product-cart-container">
+                        <!-- Purchase Products Section -->
                         <div class="products-section">
                             <div class="section-header">
                                 <h2>Purchase Products</h2>
                                 <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
                             </div>
                             <div class="products-container">
-                                <!-- Products will be dynamically inserted here with quantity controls -->
+                                <!-- Products will be dynamically inserted here -->
                             </div>
                         </div>
-                    
+
                         <!-- Cart Section -->
                         <div class="cart-section">
                             <div class="total-container">
                                 <strong>Total: ₱<span id="total">0</span></strong>
                             </div>
                             <div class="cart-container"></div>
-                            <button id="completePurchaseBtn" disabled>Complete Purchase</button>
                         </div>
                     </div>  
-                </div>
             </div>
+        </div>
+
+
 
             <!-- Add Product -->
             <div style="display:none" class="data-table downloads">
@@ -400,89 +281,305 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="cart.js"></script>
 
+
+
     <script src="cart.js" type="module"></script>
     <script src="dashboard.js" type="module"></script>
+    <script src="logoutindex.js" type="module"></script>
     <!-- Sources for icons -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
-    
-    <!-- Notification System Script -->
-    <script>
-        // Notification system variables
-        const MAX_NOTIFICATIONS = 3;
-        const NOTIFICATION_TIMEOUT = 4000;
-        let notificationQueue = [];
-        let activeNotifications = 0;
 
-        // Global notification function
-        function showBubbleNotification(type, icon, message) {
-            // Create container if it doesn't exist
-            let container = document.querySelector('.notification-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.className = 'notification-container';
-                document.body.appendChild(container);
-            }
+</body> <!DOCTYPE html>More actions
+<html lang="en">
 
-            // Don't proceed if we've reached max notifications
-            if (activeNotifications >= MAX_NOTIFICATIONS) {
-                notificationQueue.push({ type, icon, message });
-                return;
-            }
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--<link rel="stylesheet" href="/  Assets/style.css">-->
+    <link rel="stylesheet" href="Assets/style.css">
+    <link rel="icon" type="image/png" href="Assets/bizlogo.png">
+    <base href="/BizVentory-app/">
+    <title>Dashboard</title>
 
-            activeNotifications++;
-            
-            const notification = document.createElement('div');
-            notification.className = `notification-bubble ${type}`;
-            notification.innerHTML = `
-                <ion-icon name="${icon}" class="notification-icon"></ion-icon>
-                <div class="notification-content">${message}</div>
-                <button class="close-btn">&times;</button>
-            `;
-            
-            container.appendChild(notification);
-            
-            // Force reflow to enable transition
-            void notification.offsetWidth;
-            
-            // Show notification
-            notification.classList.add('show');
-            
-            // Auto-hide after timeout
-            const autoHideTimer = setTimeout(() => {
-                hideNotification(notification);
-            }, NOTIFICATION_TIMEOUT);
-            
-            // Close button click handler
-            notification.querySelector('.close-btn').addEventListener('click', () => {
-                clearTimeout(autoHideTimer);
-                hideNotification(notification);
-            });
-            
-            function hideNotification(element) {
-                element.classList.remove('show');
-                element.classList.add('hide');
-                setTimeout(() => {
-                    element.remove();
-                    activeNotifications--;
-                    // Show next notification from queue if available
-                    if (notificationQueue.length > 0) {
-                        const nextNotif = notificationQueue.shift();
-                        showBubbleNotification(nextNotif.type, nextNotif.icon, nextNotif.message);
-                    }
-                }, 300);
-            }
+    <style>
+        /* Notifications Section Styling */
+        .notifications-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
-        // Make it globally accessible
-        window.showBubbleNotification = showBubbleNotification;
+        .notifications-section h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+        .notification {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: #f9f9f9;
+            border-left: 4px solid #ff4757;
+        }
+        .notification.low-stock {
+            border-left-color: #ffa502;
+        }
+        .notification.expiring {
+            border-left-color: #2ed573;
+        }
+        .notification.out-of-stock {
+            border-left-color: #ff4757;
+        }
+        .notification.expired {
+            border-left-color: #57606f;
+        }
+    </style>
+</head>
 
-        // Test notifications - you can remove these
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                showBubbleNotification('success', 'checkmark-circle-outline', 'System loaded successfully!');
-            }, 1000);
-        });
-    </script>
-</body>
-</html>
+<body>
+
+    <nav>
+        <div class="logo">
+            <div class="logo-image">
+                <img src="/Assets/bizlogo.png" alt="">
+            </div>
+        </div>
+        <div class="menu-items">
+            <ul class="navLinks">
+                <li class="navList active">
+                    <a href="javascript:void(0)">
+                        <ion-icon name="home-outline"></ion-icon>
+                        <span class="links">Dashboard</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="javascript:void(0)">
+                        <ion-icon name="folder-outline"></ion-icon>
+                        <span class="links">Content</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="javascript:void(0)">
+                        <ion-icon name="analytics-outline"></ion-icon>
+                        <span class="links">Analytics</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="javascript:void(0)">
+                        <ion-icon name="person-add-outline"></ion-icon>
+                        <span class="links">Customer Purchase</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="addproduct.html">
+                        <ion-icon name="add-circle-outline"></ion-icon>
+                        <span class="links">Add Product</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="deleteproduct.html">
+                        <ion-icon name="trash-outline"></ion-icon>
+                        <span class="links">Delete Product</span>
+                    </a>
+                </li>
+                <li class="navList">
+                    <a href="modproduct.html">
+                        <ion-icon name="create-outline"></ion-icon>
+                        <span class="links">Modify Product</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="inventory.html">
+                        <ion-icon name="cube-outline"></ion-icon>
+                        <span class="links">Inventory</span>
+                    </a>
+                </li>
+
+            </ul>
+            <ul class="bottom-link">
+                <li>
+                    <a class="profile" href="javascript:void(0)">
+                        <ion-icon name="person-circle-outline"></ion-icon>
+                        <span name="profile" class="links">Profile</span>
+                    </a>
+                </li>
+                <li>
+                        <a href="#logout" id="logout">
+                            <ion-icon name="log-out-outline"></ion-icon>
+                            <span class="links">Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="dashboard">
+        <div class="container"> 
+            <div class="overview">
+                <div class="title">
+                    <ion-icon name="accessibility-outline"></ion-icon>
+                    <span class="text">Dashboard</span>
+                </div>
+                
+                <div class="boxes">
+                    <div class="box box1">
+                        <ion-icon name="storefront-outline"></ion-icon>
+                        <span class="text">Manage Inventory</span>
+                        <span class="number">0</span>
+                        <span class="number" id="inventoryCount">0</span>
+                    </div>
+
+                    <div class="box box2">
+                        <ion-icon name="people-outline"></ion-icon>
+                        <span class="text">Manage Transaction</span>
+                        <span class="number">0</span>
+                    </div>
+                    <div class="box box3">
+                        <ion-icon name="bar-chart-outline"></ion-icon>
+                        <span class="text">Sales Report</span>
+                        <span class="number">0</span>
+                        <span class="number" id="transactionCount">0</span>
+                    </div>
+
+                    <div class="box box4">
+                        <ion-icon name="cart-outline"></ion-icon>
+                        <span class="text">Customer Purchase</span>
+                        <span class="number">0</span>
+                    </div>
+                </div> 
+            </div>
+            <!-- Notifications Section -->
+            <div class="notifications-section">
+                <h2>Notifications</h2>
+                <div id="notificationsContainer">
+                    <!-- Notifications will be dynamically inserted here -->
+                </div>
+            </div>
+            <!-- Recent Activities -->
+            <div class="data-table activityTable">
+                <div class="title">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span class="text">Recent Activities</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                    <div class="products-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentProductsBody">
+                                <!-- Recent products will be dynamically inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div style="display:none" class="data-table userDetailsTable">
+                <div class="title">
+                    <ion-icon name="folder-outline"></ion-icon>
+                    <span class="text">Content</span>
+                </div>
+                <div class="transactions-table">
+                    <!-- Transactions table will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div style="display:none" class="data-table EditUserRole">
+                <div class="title">
+                    <ion-icon name="analytics-outline"></ion-icon>
+                    <span class="text">Analytics</span>
+                </div>
+                <div class="charts-container">
+                    <!-- Pie Chart for Product Categories -->
+                    <div class="chart-container">
+                        <canvas id="categoryPieChart"></canvas>
+                    </div>
+
+                    <!-- Bar Chart for Product Quantities -->
+                    <div class="chart-container">
+                        <canvas id="quantityBarChart"></canvas>
+                    </div>
+
+                    <!-- Line Chart for Product Expiry -->
+                    <div class="chart-container">
+                        <canvas id="expiryLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Purchase -->
+            <div style="display:none" class="data-table VehicleDetails">
+            <div class="title">
+                <ion-icon name="bag-outline"></ion-icon>
+                <span class="text">Products</span>
+            </div>
+            <div>
+                <!-- NEW: Purchase Products & Cart Section -->
+                <div class="product-cart-container">
+                    <!-- Purchase Products Section -->
+                    <div class="product-cart-container">
+                        <!-- Purchase Products Section -->
+                        <div class="products-section">
+                            <div class="section-header">
+                                <h2>Purchase Products</h2>
+                                <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+                            </div>
+                            <div class="products-container">
+                                <!-- Products will be dynamically inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Cart Section -->
+                        <div class="cart-section">
+                            <div class="total-container">
+                                <strong>Total: ₱<span id="total">0</span></strong>
+                            </div>
+                            <div class="cart-container"></div>
+                        </div>
+                    </div>  
+            </div>
+        </div>
+
+
+
+            <!-- Add Product -->
+            <div style="display:none" class="data-table downloads">
+                <div class="title">
+                    <ion-icon name="add-outline"></ion-icon>
+                    <span class="text">Description</span>
+                </div>
+                <div>
+                    <!-- Enter any table or section here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="cart.js"></script>
+
+
+
+    <script src="cart.js" type="module"></script>
+    <script src="dashboard.js" type="module"></script>
+    <script src="logoutindex.js" type="module"></script>
+    <!-- Sources for icons -->
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+</body> 
