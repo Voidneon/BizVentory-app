@@ -19,22 +19,20 @@ const auth = getAuth();
 // (Same as in your original post)
 // Replace duplicate or conflicting functions per the analysis
 
-function setupNavigationTabs() {
-    document.querySelectorAll(".navList").forEach(function (element) {
-        element.addEventListener("click", function () {
-            document.querySelectorAll(".navList").forEach(e => e.classList.remove("active"));
-            this.classList.add("active");
+document.querySelectorAll(".navList").forEach(function (element) {
+    element.addEventListener("click", function () {
+        document.querySelectorAll(".navList").forEach(e => e.classList.remove("active"));
+        this.classList.add("active");
 
-            const index = Array.from(this.parentNode.children).indexOf(this);
-            document.querySelectorAll(".data-table").forEach(table => table.style.display = "none");
+        let index = Array.from(this.parentNode.children).indexOf(this);
+        document.querySelectorAll(".data-table").forEach(table => table.style.display = "none");
 
-            const tables = document.querySelectorAll(".data-table");
-            if (tables.length > index) {
-                tables[index].style.display = "block";
-            }
-        });
+        let tables = document.querySelectorAll(".data-table");
+        if (tables.length > index) {
+            tables[index].style.display = "block";
+        }
     });
-}
+});
 
 // ========== Fixed Dashboard Count Loader ==========
 async function loadDashboardCounts(userId) {
