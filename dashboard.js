@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCzJLBy4fu8fIh0WmnjC9dKG_m1t-wI-Oc",
@@ -15,43 +15,108 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
 
-// ✅ Navigation Click Event (Unchanged)
-document.querySelectorAll(".navList").forEach(function (element) {
-    element.addEventListener("click", function () {
-        document.querySelectorAll(".navList").forEach(e => e.classList.remove("active"));
-        this.classList.add("active");
+/* ====================== */
+/* NOTIFICATION SYSTEM */
+/* ====================== */
+const MAX_NOTIFICATIONS = 3;
+const NOTIFICATION_TIMEOUT = 4000;
+let notificationQueue = [];
+let activeNotifications = 0;
 
-        let index = Array.from(this.parentNode.children).indexOf(this);
-        document.querySelectorAll(".data-table").forEach(table => table.style.display = "none");
-
-        let tables = document.querySelectorAll(".data-table");
-        if (tables.length > index) {
-            tables[index].style.display = "block";
-        }
+function showBubbleNotifications(notifications) {
+    // Clear existing queue
+    notificationQueue = [];
+    
+    // Show first batch immediately
+    const toShowNow = notifications.slice(0, MAX_NOTIFICATIONS);
+    notificationQueue = notifications.slice(MAX_NOTIFICATIONS);
+    
+    toShowNow.forEach(notification => {
+        createNotification(notification);
     });
-});
-
-
-
-
-function closePopup() {
-    const popup = document.querySelector(".transaction-popup");
-    if (popup) {
-        popup.remove();
-}
 }
 
-// ✅ Retrieve Cart from Local Storage
+function createNotification({type, icon, message}) {
+    let container = document.querySelector('.notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+    }
+
+    if (activeNotifications >= MAX_NOTIFICATIONS) {
+        notificationQueue.push({type, icon, message});
+        return;
+    }
+
+    activeNotifications++;
+    
+    const notification = document.createElement('div');
+    notification.className = `notification-bubble ${type}`;
+    notification.innerHTML = `
+        <ion-icon name="${icon}" class="notification-icon"></ion-icon>
+        <div class="notification-content">${message}</div>
+        <button class="close-btn">&times;</button>
+    `;
+    
+    container.appendChild(notification);
+    void notification.offsetWidth;
+    notification.classList.add('show');
+    
+    const autoHideTimer = setTimeout(() => {
+        removeNotification(notification);
+    }, NOTIFICATION_TIMEOUT);
+    
+    notification.querySelector('.close-btn').addEventListener('click', () => {
+        clearTimeout(autoHideTimer);
+        removeNotification(notification);
+    });
+}
+
+function removeNotification(element) {
+    element.classList.remove('show');
+    element.classList.add('hide');
+    setTimeout(() => {
+        element.remove();
+        activeNotifications--;
+        showNextQueuedNotification();
+    }, 300);
+}
+
+function showNextQueuedNotification() {
+    if (notificationQueue.length > 0 && activeNotifications < MAX_NOTIFICATIONS) {
+        const nextNotif = notificationQueue.shift();
+        createNotification(nextNotif);
+    }
+}
+
+window.showBubbleNotification = (type, icon, message) => {
+    showBubbleNotifications([{type, icon, message}]);
+};
+window.showBubbleNotifications = showBubbleNotifications;
+
+/* ====================== */
+/* CART SYSTEM */
+/* ====================== */
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-// Function to add a product to the cart
+function updatePurchaseButton() {
+    const purchaseBtn = document.getElementById("completePurchaseBtn");
+    if (purchaseBtn) {
+        purchaseBtn.disabled = cart.length === 0;
+    }
+}
+
 function addToCart(productId, productName, price, quantity = 1) {
-    // Check if the product is already in the cart
+    if (quantity <= 0) {
+        showBubbleNotification("error", "close-circle-outline", "Quantity must be at least 1");
+        return;
+    }
+
     const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
-        existingItem.quantity += quantity; // Increase quantity if already in cart
+        existingItem.quantity += quantity;
     } else {
-        // Add new item to the cart
         cart.push({
             id: productId,
             name: productName,
@@ -63,91 +128,76 @@ function addToCart(productId, productName, price, quantity = 1) {
     updateCart();
 }
 
-// Function to update cart display
-function updateCart() {
-    let cartContainer = document.querySelector(".cart-container");
-    let totalPrice = 0;
+function setCartItemQuantity(productId, newQuantity) {
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+    }
 
-    cartContainer.innerHTML = ""; // Clear previous cart display
-
-    cart.forEach(item => {
-        totalPrice += item.price * item.quantity;
-
-        let cartBox = document.createElement("div");
-        cartBox.classList.add("cart-box");
-        cartBox.dataset.itemId = item.id; // Add item ID as a data attribute
-
-        cartBox.innerHTML = `
-            <img src="placeholder.png" alt="${item.name}">
-            <p>${item.name} - ₱${item.price.toFixed(2)} (x${item.quantity})</p>
-            <button>Remove</button>
-        `;
-
-        cartContainer.appendChild(cartBox);
-    });
-
-    document.getElementById("total").textContent = totalPrice.toFixed(2);
+    const item = cart.find(item => item.id === productId);
+    if (item) {
+        item.quantity = newQuantity;
+        saveCart();
+        updateCart();
+    }
 }
 
-// Function to remove an item from the cart
 function removeFromCart(itemId) {
     cart = cart.filter(item => item.id !== itemId);
     saveCart();
     updateCart();
 }
 
-// Function to save cart in localStorage
+function updateCart() {
+    let cartContainer = document.querySelector(".cart-container");
+    let totalPrice = 0;
+
+    if (!cartContainer) return;
+
+    cartContainer.innerHTML = "";
+
+    cart.forEach(item => {
+        totalPrice += item.price * item.quantity;
+
+        let cartBox = document.createElement("div");
+        cartBox.classList.add("cart-box");
+        cartBox.dataset.itemId = item.id;
+
+        cartBox.innerHTML = `
+            <img src="placeholder.png" alt="${item.name}">
+            <div class="cart-item-details">
+                <p>${item.name}</p>
+                <div class="cart-item-controls">
+                    <button class="quantity-btn minus">-</button>
+                    <input type="number" class="cart-quantity" value="${item.quantity}" min="1">
+                    <button class="quantity-btn plus">+</button>
+                    <span class="item-price">₱${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+            </div>
+            <button class="remove-btn">Remove</button>
+        `;
+
+        cartContainer.appendChild(cartBox);
+    });
+
+    if (document.getElementById("total")) {
+        document.getElementById("total").textContent = totalPrice.toFixed(2);
+    }
+    updatePurchaseButton();
+}
+
 function saveCart() {
     localStorage.setItem("cart", JSON.stringify(cart));
 }
 
-// Make filterProducts globally accessible
-window.filterProducts = function () {
-    let searchQuery = document.getElementById("search").value.toLowerCase();
-    let products = document.querySelectorAll(".product-box");
-
-    products.forEach(product => {
-        let productName = product.querySelector("p").textContent.toLowerCase();
-        product.style.display = productName.includes(searchQuery) ? "block" : "none";
-    });
-};
-
-// ✅ Scroll Functionality for Purchase Products and Cart
-function enableScroll(containerSelector) {
-    const container = document.querySelector(containerSelector);
-
-    if (container) {
-        container.addEventListener("wheel", (event) => {
-            event.preventDefault();
-            container.scrollTop += event.deltaY; // Scroll vertically
-        });
-
-        let isDragging = false;
-        let startY, scrollTop;
-
-        container.addEventListener("mousedown", (event) => {
-            isDragging = true;
-            startY = event.pageY - container.offsetTop;
-            scrollTop = container.scrollTop;
-        });
-
-        container.addEventListener("mouseleave", () => (isDragging = false));
-        container.addEventListener("mouseup", () => (isDragging = false));
-
-        container.addEventListener("mousemove", (event) => {
-            if (!isDragging) return;
-            event.preventDefault();
-            let y = event.pageY - container.offsetTop;
-            let walk = (y - startY) * 2; // Increase scroll speed
-            container.scrollTop = scrollTop - walk;
-        });
-    }
-}
-
-// Load products from Firestore
+/* ====================== */
+/* PRODUCTS SYSTEM */
+/* ====================== */
 async function loadProducts(userId) {
     const productsContainer = document.querySelector(".products-container");
-    productsContainer.innerHTML = ""; // Clear previous products
+    if (!productsContainer) return;
+
+    productsContainer.innerHTML = "";
 
     try {
         const q = query(collection(db, "users", userId, "products"), orderBy("name"));
@@ -157,29 +207,155 @@ async function loadProducts(userId) {
             const product = doc.data();
             const productBox = document.createElement("div");
             productBox.classList.add("product-box");
-            productBox.dataset.productId = doc.id; // Add product ID as a data attribute
+            productBox.dataset.productId = doc.id;
 
             productBox.innerHTML = `
-                <p>${product.name} - ₱${product.price.toFixed(2)} (Stock: ${product.quantity})</p>
-                <button>Add to Cart</button>
+                <p>${product.name} - ₱${product.price.toFixed(2)}</p>
+                <small>Stock: ${product.quantity}</small>
+                <div class="quantity-controls">
+                    <button class="quantity-btn minus">-</button>
+                    <input type="number" class="quantity-input" value="1" min="1" max="${product.quantity}">
+                    <button class="quantity-btn plus">+</button>
+                    <button class="add-to-cart-btn">Add to Cart</button>
+                </div>
             `;
 
             productsContainer.appendChild(productBox);
         });
+
+        setupProductEventListeners();
     } catch (error) {
-        console.error("❌ Error loading products:", error);
-        alert("❌ Failed to load products.");
+        console.error("Error loading products:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load products.");
     }
 }
 
-// Complete purchase and update Firestore
-async function completePurchase(userId) {
-    try {
-        // Generate a unique transaction ID and get the current date and time
-        const transactionId = Date.now().toString(); // Unique transaction ID
-        const transactionDate = new Date().toLocaleString(); // Current date and time
+function setupProductEventListeners() {
+    const productsContainer = document.querySelector(".products-container");
+    if (!productsContainer) return;
 
-        // Prepare transaction data
+    productsContainer.addEventListener("click", (event) => {
+        const productBox = event.target.closest(".product-box");
+        if (!productBox) return;
+
+        const productId = productBox.dataset.productId;
+        const productName = productBox.querySelector("p").textContent.split(" - ")[0];
+        const price = parseFloat(productBox.querySelector("p").textContent.split("₱")[1]);
+        const quantityInput = productBox.querySelector(".quantity-input");
+        
+        if (event.target.classList.contains("plus")) {
+            quantityInput.stepUp();
+        } else if (event.target.classList.contains("minus")) {
+            quantityInput.stepDown();
+        } else if (event.target.classList.contains("add-to-cart-btn")) {
+            const quantity = parseInt(quantityInput.value);
+            addToCart(productId, productName, price, quantity);
+            quantityInput.value = 1;
+        }
+    });
+}
+
+/* ====================== */
+/* TRANSACTIONS SYSTEM */
+/* ====================== */
+let transactionsUnsubscribe = null;
+
+async function loadTransactions(userId) {
+    const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
+    if (!transactionsContainer) return;
+
+    transactionsContainer.innerHTML = "Loading transactions...";
+
+    // Unsubscribe from previous listener if exists
+    if (transactionsUnsubscribe) {
+        transactionsUnsubscribe();
+    }
+
+    try {
+        const q = query(
+            collection(db, "users", userId, "transactions"), 
+            orderBy("transactionDate", "desc")
+        );
+
+        // Set up real-time listener
+        transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
+            const transactions = querySnapshot.docs.map(doc => {
+                return {
+                    id: doc.id,
+                    ...doc.data()
+                };
+            });
+            renderTransactions(transactions, transactionsContainer);
+        });
+
+    } catch (error) {
+        console.error("Error loading transactions:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load transactions.");
+    }
+}
+
+function renderTransactions(transactions, container) {
+    container.innerHTML = "";
+
+    const table = document.createElement("table");
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Transaction ID</th>
+                <th>Date and Time</th>
+                <th>Total Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${transactions.map(transaction => `
+                <tr>
+                    <td>${transaction.transactionId}</td>
+                    <td>${transaction.transactionDate}</td>
+                    <td>₱${transaction.total.toFixed(2)}</td>
+                    <td class="actions">
+                        <button class="btn-view" onclick="showTransactionDetails('${transaction.id}')">View Details</button>
+                    </td>
+                </tr>
+            `).join("")}
+        </tbody>
+    `;
+
+    container.appendChild(table);
+}
+
+/* ====================== */
+/* PURCHASE SYSTEM */
+/* ====================== */
+async function completePurchase(userId) {
+    if (cart.length === 0) {
+        showBubbleNotification("error", "close-circle-outline", "Cannot complete purchase with empty cart!");
+        return;
+    }
+
+    try {
+        // First validate all items in cart
+        for (const item of cart) {
+            const productRef = doc(db, "users", userId, "products", item.id);
+            const productDoc = await getDoc(productRef);
+            
+            if (!productDoc.exists()) {
+                showBubbleNotification("error", "close-circle-outline", `Product ${item.name} no longer exists!`);
+                return;
+            }
+
+            const currentQuantity = productDoc.data().quantity;
+            if (currentQuantity < item.quantity) {
+                showBubbleNotification("error", "close-circle-outline", 
+                    `Not enough stock for ${item.name}. Only ${currentQuantity} available.`);
+                return;
+            }
+        }
+
+        // Process transaction
+        const transactionId = Date.now().toString();
+        const transactionDate = new Date().toLocaleString();
+
         const transactionData = {
             transactionId,
             transactionDate,
@@ -189,170 +365,42 @@ async function completePurchase(userId) {
                 quantity: item.quantity,
                 unitPrice: item.price
             })),
-            total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0) // Calculate total
+            total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
         };
 
-        // Save the transaction to Firestore
+        // Add transaction
         await addDoc(collection(db, "users", userId, "transactions"), transactionData);
 
-        // Deduct quantities from Firestore
-        for (const item of cart) {
+        // Update stock levels
+        const updatePromises = cart.map(item => {
             const productRef = doc(db, "users", userId, "products", item.id);
-            const productDoc = await getDoc(productRef);
-            const currentQuantity = productDoc.data().quantity;
-
-            if (currentQuantity < item.quantity) {
-                alert(`❌ Not enough stock for ${item.name}.`);
-                return;
-            }
-
-            await updateDoc(productRef, {
-                quantity: currentQuantity - item.quantity
+            return getDoc(productRef).then(productDoc => {
+                const currentQuantity = productDoc.data().quantity;
+                return updateDoc(productRef, {
+                    quantity: currentQuantity - item.quantity
+                });
             });
-        }
+        });
 
-        // Clear the cart
+        await Promise.all(updatePromises);
+
+        // Clear cart
         cart = [];
         saveCart();
         updateCart();
+        updatePurchaseButton();
 
-        alert("✅ Purchase completed successfully!");
+        showBubbleNotification("success", "checkmark-circle-outline", "Purchase completed successfully!");
+
     } catch (error) {
-        console.error("❌ Error completing purchase:", error);
-        alert("❌ Failed to complete purchase.");
+        console.error("Error completing purchase:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to complete purchase.");
     }
 }
 
-// Load notifications
-async function loadNotifications(userId) {
-    const notificationsContainer = document.getElementById("notificationsContainer");
-    notificationsContainer.innerHTML = ""; // Clear existing content
-
-    try {
-        const q = query(collection(db, "users", userId, "products"));
-        const querySnapshot = await getDocs(q);
-
-        const today = new Date();
-        const notifications = [];
-
-        querySnapshot.forEach((doc) => {
-            const product = doc.data();
-            const expirationDate = new Date(product.expirationDate);
-            const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
-
-            // Low Stock Notification
-            if (product.quantity <= product.lowStockThreshold) {
-                notifications.push({
-                    type: "low-stock",
-                    message: `Low stock for ${product.name}. Only ${product.quantity} left!`
-                });
-            }
-
-            // Expiring Soon Notification
-            if (daysUntilExpiration <= 7 && daysUntilExpiration >= 0) {
-                notifications.push({
-                    type: "expiring",
-                    message: `${product.name} is expiring in ${daysUntilExpiration} days!`
-                });
-            }
-
-            // Out of Stock Notification
-            if (product.quantity === 0) {
-                notifications.push({
-                    type: "out-of-stock",
-                    message: `${product.name} is out of stock!`
-                });
-            }
-
-            // Expired Notification
-            if (daysUntilExpiration < 0) {
-                notifications.push({
-                    type: "expired",
-                    message: `${product.name} has expired!`
-                });
-            }
-        });
-
-        // Display notifications
-        notifications.forEach(notification => {
-            const notificationElement = document.createElement("div");
-            notificationElement.className = `notification ${notification.type}`;
-            notificationElement.textContent = notification.message;
-            notificationsContainer.appendChild(notificationElement);
-        });
-
-        // Trigger popup for critical notifications
-        const criticalNotifications = notifications.filter(n => n.type === "out-of-stock" || n.type === "expired");
-        criticalNotifications.forEach(notification => {
-            alert(notification.message); // Or use a custom popup
-        });
-    } catch (error) {
-        console.error("❌ Error loading notifications:", error);
-        alert("❌ Failed to load notifications.");
-    }
-}
-
-// Enable scroll for both sections after DOM loads
-document.addEventListener("DOMContentLoaded", () => {
-    enableScroll(".products-container");
-    enableScroll(".cart-container");
-    updateCart(); // Ensure the cart is loaded from storage when the page refreshes
-
-    const cartContainer = document.querySelector(".cart-container");
-
-    // Event delegation for "Remove" buttons
-    cartContainer.addEventListener("click", (event) => {
-        if (event.target.tagName === "BUTTON" && event.target.textContent === "Remove") {
-            const itemId = event.target.closest(".cart-box").dataset.itemId;
-            removeFromCart(itemId);
-        }
-    });
-
-    const productsContainer = document.querySelector(".products-container");
-
-    // Event delegation for "Add to Cart" buttons
-    productsContainer.addEventListener("click", (event) => {
-        if (event.target.tagName === "BUTTON" && event.target.textContent === "Add to Cart") {
-            const productBox = event.target.closest(".product-box");
-            const productId = productBox.dataset.productId;
-            const productName = productBox.querySelector("p").textContent.split(" - ")[0];
-            const price = parseFloat(productBox.querySelector("p").textContent.split("₱")[1]);
-
-            addToCart(productId, productName, price, 1);
-        }
-    });
-
-    // Load products and notifications for the logged-in user
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loadProducts(user.uid);
-            loadNotifications(user.uid);
-            loadProductsForAnalytics(user.uid);
-            loadTransactions(user.uid);
-            loadRecentProducts(user.uid);
-            loadDashboardCounts(user.uid); 
-        } else {
-            alert("⚠ You are not logged in!");
-            window.location.href = "login.html";
-        }
-    });
-    
-    // Add a button to complete the purchase
-    const purchaseButton = document.createElement("button");
-    purchaseButton.textContent = "Complete Purchase";
-    purchaseButton.addEventListener("click", () => {
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                completePurchase(user.uid);
-            } else {
-                alert("⚠ You are not logged in!");
-            }
-        });
-    });
-
-    document.querySelector(".cart-section").appendChild(purchaseButton);
-});
-
+/* ====================== */
+/* ANALYTICS SYSTEM */
+/* ====================== */
 async function loadProductsForAnalytics(userId) {
     try {
         const q = query(collection(db, "users", userId, "products"));
@@ -360,39 +408,35 @@ async function loadProductsForAnalytics(userId) {
 
         const products = [];
         querySnapshot.forEach((doc) => {
-            const product = doc.data();
-            products.push(product);
+            products.push({
+                id: doc.id,
+                ...doc.data()
+            });
         });
 
-        // Render charts
         renderCategoryPieChart(products);
         renderQuantityBarChart(products);
         renderExpiryLineChart(products);
     } catch (error) {
-        console.error("❌ Error loading products for analytics:", error);
-        alert("❌ Failed to load products for analytics.");
+        console.error("Error loading products for analytics:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load analytics data.");
     }
 }
 
 function renderCategoryPieChart(products) {
-    const categoryCounts = {};
+    const ctx = document.getElementById("categoryPieChart")?.getContext("2d");
+    if (!ctx) return;
 
-    // Count products by category
+    const categoryCounts = {};
     products.forEach(product => {
-        if (categoryCounts[product.category]) {
-            categoryCounts[product.category]++;
-        } else {
-            categoryCounts[product.category] = 1;
-        }
+        categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1;
     });
 
-    const ctx = document.getElementById("categoryPieChart").getContext("2d");
     new Chart(ctx, {
         type: "pie",
         data: {
             labels: Object.keys(categoryCounts),
             datasets: [{
-                label: "Products by Category",
                 data: Object.values(categoryCounts),
                 backgroundColor: [
                     "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"
@@ -413,20 +457,17 @@ function renderCategoryPieChart(products) {
 }
 
 function renderQuantityBarChart(products) {
-    const productNames = products.map(product => product.name);
-    const productQuantities = products.map(product => product.quantity);
+    const ctx = document.getElementById("quantityBarChart")?.getContext("2d");
+    if (!ctx) return;
 
-    const ctx = document.getElementById("quantityBarChart").getContext("2d");
     new Chart(ctx, {
         type: "bar",
         data: {
-            labels: productNames,
+            labels: products.map(p => p.name),
             datasets: [{
-                label: "Product Quantities",
-                data: productQuantities,
-                backgroundColor: "#36A2EB",
-                borderColor: "#36A2EB",
-                borderWidth: 1
+                label: "Stock Quantity",
+                data: products.map(p => p.quantity),
+                backgroundColor: "#36A2EB"
             }]
         },
         options: {
@@ -447,18 +488,20 @@ function renderQuantityBarChart(products) {
 }
 
 function renderExpiryLineChart(products) {
+    const ctx = document.getElementById("expiryLineChart")?.getContext("2d");
+    if (!ctx) return;
+
     const today = new Date();
     const expiryData = products.map(product => {
+        if (!product.expirationDate) return 0;
         const expiryDate = new Date(product.expirationDate);
-        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry;
+        return Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
     });
 
-    const ctx = document.getElementById("expiryLineChart").getContext("2d");
     new Chart(ctx, {
         type: "line",
         data: {
-            labels: products.map(product => product.name),
+            labels: products.map(p => p.name),
             datasets: [{
                 label: "Days Until Expiry",
                 data: expiryData,
@@ -485,101 +528,21 @@ function renderExpiryLineChart(products) {
     });
 }
 
-async function loadTransactions(userId) {
-    const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
-    transactionsContainer.innerHTML = ""; // Clear previous content
-
-    try {
-        const q = query(collection(db, "users", userId, "transactions"), orderBy("transactionDate", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        const table = document.createElement("table");
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Transaction ID</th>
-                    <th>Date and Time</th>
-                    <th>Total Amount</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${querySnapshot.docs.map(doc => {
-                    const transaction = doc.data();
-                    return `
-                        <tr>
-                            <td>${transaction.transactionId}</td>
-                            <td>${transaction.transactionDate}</td>
-                            <td>₱${transaction.total.toFixed(2)}</td>
-                            <td class="actions">
-                                <button class="btn-view" onclick="showTransactionDetails('${userId}', '${doc.id}')">View Details</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join("")}
-            </tbody>
-        `;
-
-        transactionsContainer.appendChild(table);
-    } catch (error) {
-        console.error("❌ Error loading transactions:", error);
-        alert("❌ Failed to load transactions.");
-    }
-}
-
-// Make showTransactionDetails globally accessible
-window.showTransactionDetails = async function (userId, transactionId) {
-    try {
-        const transactionDoc = await getDoc(doc(db, "users", userId, "transactions", transactionId));
-        const transaction = transactionDoc.data();
-
-        const popup = document.createElement("div");
-        popup.className = "transaction-popup active"; // Add 'active' class
-        popup.innerHTML = `
-            <div class="popup-content">
-                <h2>Transaction Details</h2>
-                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
-                <p><strong>Date and Time:</strong> ${transaction.transactionDate}</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item ID</th>
-                            <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${transaction.items.map(item => `
-                            <tr>
-                                <td>${item.itemId}</td>
-                                <td>${item.itemName}</td>
-                                <td>${item.quantity}</td>
-                                <td>₱${item.unitPrice.toFixed(2)}</td>
-                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-                <p><strong>Total Amount:</strong> ₱${transaction.total.toFixed(2)}</p>
-                <button onclick="closePopup()">Close</button>
-            </div>
-        `;
-
-        document.body.appendChild(popup);
-    } catch (error) {
-        console.error("❌ Error fetching transaction details:", error);
-        alert("❌ Failed to fetch transaction details.");
-    }
-};
-
+/* ====================== */
+/* RECENT PRODUCTS */
+/* ====================== */
 async function loadRecentProducts(userId) {
     const recentProductsBody = document.getElementById("recentProductsBody");
-    recentProductsBody.innerHTML = ""; // Clear existing content
+    if (!recentProductsBody) return;
+
+    recentProductsBody.innerHTML = "";
 
     try {
-        const q = query(collection(db, "users", userId, "products"), orderBy("date", "desc"), limit(5));
+        const q = query(
+            collection(db, "users", userId, "products"), 
+            orderBy("date", "desc"), 
+            limit(5)
+        );
         const querySnapshot = await getDocs(q);
 
         querySnapshot.forEach((doc) => {
@@ -600,59 +563,262 @@ async function loadRecentProducts(userId) {
             recentProductsBody.appendChild(row);
         });
     } catch (error) {
-        console.error("❌ Error loading recent products:", error);
-        alert("❌ Failed to load recent products.");
+        console.error("Error loading recent products:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load recent products.");
     }
 }
+
+/* ====================== */
+/* TRANSACTION DETAILS */
+/* ====================== */
+window.showTransactionDetails = async function (transactionId) {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const transactionDoc = await getDoc(doc(db, "users", user.uid, "transactions", transactionId));
+        if (!transactionDoc.exists()) {
+            showBubbleNotification("error", "alert-circle-outline", "Transaction not found");
+            return;
+        }
+
+        const transaction = transactionDoc.data();
+
+        const popup = document.createElement("div");
+        popup.className = "transaction-popup active";
+        popup.innerHTML = `
+            <div class="popup-content">
+                <span class="close-popup" onclick="closePopup()">&times;</span>
+                <h2>Transaction Details</h2>
+                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                <p><strong>Date:</strong> ${transaction.transactionDate}</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transaction.items.map(item => `
+                            <tr>
+                                <td>${item.itemName}</td>
+                                <td>${item.quantity}</td>
+                                <td>₱${item.unitPrice.toFixed(2)}</td>
+                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+                
+                <div class="transaction-total">
+                    <strong>Total Amount: ₱${transaction.total.toFixed(2)}</strong>
+                </div>
+                
+                <button onclick="closePopup()">Close</button>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+    } catch (error) {
+        console.error("Error showing transaction details:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load transaction details.");
+    }
+};
 
 window.closePopup = function () {
     const popup = document.querySelector(".transaction-popup");
     if (popup) {
-        popup.remove(); // Remove the popup from the DOM
+        popup.remove();
     }
 };
 
-async function loadDashboardCounts(userId) {
-    try{
-                const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
-        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
+/* ====================== */
+/* NAVIGATION */
+/* ====================== */
+function setupNavigation() {
+    document.querySelectorAll(".navList").forEach(element => {
+        element.addEventListener("click", function () {
+            document.querySelectorAll(".navList").forEach(e => e.classList.remove("active"));
+            this.classList.add("active");
 
-        
-        document.getElementById("inventoryCount").textContent = productsSnapshot.size;
+            const index = Array.from(this.parentNode.children).indexOf(this);
+            document.querySelectorAll(".data-table").forEach(table => table.style.display = "none");
 
-        
-        document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
+            const tables = document.querySelectorAll(".data-table");
+            if (tables.length > index) {
+                tables[index].style.display = "block";
+            }
+        });
+    });
+}
 
+/* ====================== */
+/* CART EVENT LISTENERS */
+/* ====================== */
+function setupCartEventListeners() {
+    const cartContainer = document.querySelector(".cart-container");
+    if (!cartContainer) return;
+
+    cartContainer.addEventListener("click", (event) => {
+        const cartBox = event.target.closest(".cart-box");
+        if (!cartBox) return;
+
+        const itemId = cartBox.dataset.itemId;
         
+        if (event.target.classList.contains("remove-btn")) {
+            removeFromCart(itemId);
+        } else if (event.target.classList.contains("minus")) {
+            const quantityInput = cartBox.querySelector(".cart-quantity");
+            const newQuantity = parseInt(quantityInput.value) - 1;
+            setCartItemQuantity(itemId, newQuantity);
+        } else if (event.target.classList.contains("plus")) {
+            const quantityInput = cartBox.querySelector(".cart-quantity");
+            const newQuantity = parseInt(quantityInput.value) + 1;
+            setCartItemQuantity(itemId, newQuantity);
+        }
+    });
+
+    // Handle direct quantity input changes
+    cartContainer.addEventListener("change", (event) => {
+        if (event.target.classList.contains("cart-quantity")) {
+            const cartBox = event.target.closest(".cart-box");
+            if (!cartBox) return;
+
+            const itemId = cartBox.dataset.itemId;
+            const newQuantity = parseInt(event.target.value);
+            setCartItemQuantity(itemId, newQuantity);
+        }
+    });
+}
+
+/* ====================== */
+/* INITIALIZATION */
+/* ====================== */
+function initApp() {
+    setupNavigation();
+    setupCartEventListeners();
+    updateCart();
+    updatePurchaseButton();
+
+    // Setup complete purchase button
+    const completePurchaseBtn = document.getElementById("completePurchaseBtn");
+    if (completePurchaseBtn) {
+        completePurchaseBtn.addEventListener("click", () => {
+            const user = auth.currentUser;
+            if (user) {
+                completePurchase(user.uid);
+            }
+        });
+    }
+
+    // Setup search functionality
+    window.filterProducts = function () {
+        const searchQuery = document.getElementById("search")?.value.toLowerCase();
+        if (!searchQuery) return;
+
+        const products = document.querySelectorAll(".product-box");
+        products.forEach(product => {
+            const productName = product.querySelector("p").textContent.toLowerCase();
+            product.style.display = productName.includes(searchQuery) ? "flex" : "none";
+        });
+    };
+
+    // Auth state listener
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loadProducts(user.uid);
+            loadNotifications(user.uid);
+            loadProductsForAnalytics(user.uid);
+            loadTransactions(user.uid);
+            loadRecentProducts(user.uid);
+        } else {
+            showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
+            window.location.href = "login.html";
+        }
+    });
+}
+
+/* ====================== */
+/* NOTIFICATIONS LOADING */
+/* ====================== */
+async function loadNotifications(userId) {
+    const notificationsContainer = document.getElementById("notificationsContainer");
+    if (!notificationsContainer) return;
+
+    notificationsContainer.innerHTML = "";
+
+    try {
+        const q = query(collection(db, "users", userId, "products"));
+        const querySnapshot = await getDocs(q);
+
         const today = new Date();
-        const todayString = today.toLocaleDateString(); 
+        const notifications = [];
 
-        let todayCount = 0;
-        transactionsSnapshot.forEach(doc => {
-            const transaction = doc.data();
-            if (transaction.transactionDate?.includes(todayString)) {
-                todayCount++;
+        querySnapshot.forEach((doc) => {
+            const product = doc.data();
+            if (!product.expirationDate) return;
+            
+            const expirationDate = new Date(product.expirationDate);
+            const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
+
+            // Low Stock Notification
+            if (product.quantity <= (product.lowStockThreshold || 5)) {
+                notifications.push({
+                    type: "warning",
+                    icon: "warning-outline",
+                    message: `Low stock for ${product.name}. Only ${product.quantity} left!`
+                });
+            }
+
+            // Expiring Soon Notification
+            if (daysUntilExpiration <= 7 && daysUntilExpiration >= 0) {
+                notifications.push({
+                    type: "warning",
+                    icon: "time-outline",
+                    message: `${product.name} is expiring in ${daysUntilExpiration} days!`
+                });
+            }
+
+            // Out of Stock Notification
+            if (product.quantity === 0) {
+                notifications.push({
+                    type: "error",
+                    icon: "close-circle-outline",
+                    message: `${product.name} is out of stock!`
+                });
+            }
+
+            // Expired Notification
+            if (daysUntilExpiration < 0) {
+                notifications.push({
+                    type: "error",
+                    icon: "alert-circle-outline",
+                    message: `${product.name} has expired!`
+                });
             }
         });
 
-        document.getElementById("todayTransactionCount").textContent = todayCount;
-    }
-    
-    catch (error){
-        console.error("Error Loading Dashboard count:", error);
+        // Display in notifications section
+        notifications.forEach(notification => {
+            const notificationElement = document.createElement("div");
+            notificationElement.className = `notification ${notification.type === "error" ? "out-of-stock" : 
+                                          notification.type === "warning" ? "low-stock" : "expiring"}`;
+            notificationElement.textContent = notification.message;
+            notificationsContainer.appendChild(notificationElement);
+        });
+
+        // Show as bubble notifications
+        showBubbleNotifications(notifications);
+
+    } catch (error) {
+        console.error("Error loading notifications:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load notifications.");
     }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-    const logoutButton = document.querySelector("#logout");
-    const profileName = document.querySelector('.profile .links'); // Target Profile Name
-
-    async function typeWriter(text, element) {
-        element.textContent = "";
-        for (let i = 0; i < text.length; i++) {
-            element.textContent += text[i];
-            await new Promise(resolve => setTimeout(resolve, 100)); // Delay per letter
-        }
-    }
-});
-
+// Start the app
+document.addEventListener("DOMContentLoaded", initApp);
