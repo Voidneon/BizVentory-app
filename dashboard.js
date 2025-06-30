@@ -38,25 +38,33 @@ function setupNavigationTabs() {
 
 // ========== Fixed Dashboard Count Loader ==========
 async function loadDashboardCounts(userId) {
-    try {
-        const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
+    try{
+                const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
         const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
 
-        document.querySelector(".box1 .number").textContent = productsSnapshot.size;
-        document.querySelector(".box2 .number").textContent = transactionsSnapshot.size;
+        
+        document.getElementById("inventoryCount").textContent = productsSnapshot.size;
+
+        
+        document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
+
+        
+        const today = new Date();
+        const todayString = today.toLocaleDateString(); 
 
         let todayCount = 0;
-        const today = new Date().toLocaleDateString();
         transactionsSnapshot.forEach(doc => {
-            const transactionDate = new Date(doc.data().transactionDate).toLocaleDateString();
-            if (transactionDate === today) todayCount++;
+            const transaction = doc.data();
+            if (transaction.transactionDate?.includes(todayString)) {
+                todayCount++;
+            }
         });
 
-        document.querySelector(".box4 .number").textContent = todayCount;
-
-    } catch (error) {
-        console.error("Error loading dashboard count:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load dashboard statistics.");
+        document.getElementById("todayTransactionCount").textContent = todayCount;
+    }
+    
+    catch (error){
+        console.error("Error Loading Dashboard count:", error);
     }
 }
 
@@ -93,6 +101,7 @@ function initApp() {
             loadProductsForAnalytics(user.uid);
             loadTransactions(user.uid);
             loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid); 
         } else {
             showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
             window.location.href = "login.html";
