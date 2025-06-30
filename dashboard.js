@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, onSnapshot, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCzJLBy4fu8fIh0WmnjC9dKG_m1t-wI-Oc",
@@ -685,10 +685,6 @@ window.closePopup = function () {
 };
 
 
-async function loadDashboardCounts(userId) {
-    try{
-                const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
-        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
 /* ====================== */
 /* NAVIGATION */
 /* ====================== */
@@ -788,6 +784,7 @@ function initApp() {
             loadProductsForAnalytics(user.uid);
             loadTransactions(user.uid);
             loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid);
         } else {
             showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
             window.location.href = "login.html";
@@ -929,5 +926,31 @@ async function loadTransactions(userId) {
         alert("❌ Failed to load transactions.");
     }
 }
+
+
+async function loadDashboardCounts(userId) {
+    try {
+        const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
+        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
+
+        document.querySelector(".box1 .number").textContent = productsSnapshot.size;
+        document.querySelector(".box2 .number").textContent = transactionsSnapshot.size;
+
+        // Optional: Count transactions for today
+        let todayCount = 0;
+        const today = new Date().toLocaleDateString();
+        transactionsSnapshot.forEach(doc => {
+            const transactionDate = new Date(doc.data().transactionDate).toLocaleDateString();
+            if (transactionDate === today) todayCount++;
+        });
+
+        document.querySelector(".box4 .number").textContent = todayCount;
+
+    } catch (error) {
+        console.error("Error loading dashboard count:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load dashboard statistics.");
+    }
+}
+
 // Start the app
 document.addEventListener("DOMContentLoaded", initApp);
