@@ -330,6 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
             loadProductsForAnalytics(user.uid);
             loadTransactions(user.uid);
             loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid); 
         } else {
             alert("⚠ You are not logged in!");
             window.location.href = "login.html";
@@ -611,6 +612,36 @@ window.closePopup = function () {
     }
 };
 
+async function loadDashboardCounts(userId) {
+    try{
+                const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
+        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
+
+        
+        document.getElementById("inventoryCount").textContent = productsSnapshot.size;
+
+        
+        document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
+
+        
+        const today = new Date();
+        const todayString = today.toLocaleDateString(); 
+
+        let todayCount = 0;
+        transactionsSnapshot.forEach(doc => {
+            const transaction = doc.data();
+            if (transaction.transactionDate?.includes(todayString)) {
+                todayCount++;
+            }
+        });
+
+        document.getElementById("todayTransactionCount").textContent = todayCount;
+    }
+    
+    catch (error){
+        console.error("Error Loading Dashboard count:", error);
+    }
+}
 
 document.addEventListener("DOMContentLoaded", function () {
     const logoutButton = document.querySelector("#logout");
@@ -624,3 +655,4 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 });
+
