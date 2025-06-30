@@ -485,47 +485,6 @@ function renderExpiryLineChart(products) {
     });
 }
 
-async function loadTransactions(userId) {
-    const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
-    transactionsContainer.innerHTML = ""; // Clear previous content
-
-    try {
-        const q = query(collection(db, "users", userId, "transactions"), orderBy("transactionDate", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        const table = document.createElement("table");
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Transaction ID</th>
-                    <th>Date and Time</th>
-                    <th>Total Amount</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${querySnapshot.docs.map(doc => {
-                    const transaction = doc.data();
-                    return `
-                        <tr>
-                            <td>${transaction.transactionId}</td>
-                            <td>${transaction.transactionDate}</td>
-                            <td>₱${transaction.total.toFixed(2)}</td>
-                            <td class="actions">
-                                <button class="btn-view" onclick="showTransactionDetails('${userId}', '${doc.id}')">View Details</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join("")}
-            </tbody>
-        `;
-
-        transactionsContainer.appendChild(table);
-    } catch (error) {
-        console.error("❌ Error loading transactions:", error);
-        alert("❌ Failed to load transactions.");
-    }
-}
 
 // Make showTransactionDetails globally accessible
 window.showTransactionDetails = async function (userId, transactionId) {
@@ -657,3 +616,46 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+
+
+async function loadTransactions(userId) {
+    const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
+    transactionsContainer.innerHTML = ""; // Clear previous content
+
+    try {
+        const q = query(collection(db, "users", userId, "transactions"), orderBy("transactionDate", "desc"));
+        const querySnapshot = await getDocs(q);
+
+        const table = document.createElement("table");
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Date and Time</th>
+                    <th>Total Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${querySnapshot.docs.map(doc => {
+                    const transaction = doc.data();
+                    return `
+                        <tr>
+                            <td>${transaction.transactionId}</td>
+                            <td>${transaction.transactionDate}</td>
+                            <td>₱${transaction.total.toFixed(2)}</td>
+                            <td class="actions">
+                                <button class="btn-view" onclick="showTransactionDetails('${userId}', '${doc.id}')">View Details</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join("")}
+            </tbody>
+        `;
+
+        transactionsContainer.appendChild(table);
+    } catch (error) {
+        console.error("❌ Error loading transactions:", error);
+        alert("❌ Failed to load transactions.");
+    }
+}
