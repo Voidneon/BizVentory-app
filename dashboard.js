@@ -612,6 +612,7 @@ window.closePopup = function () {
     }
 };
 
+
 async function loadDashboardCounts(userId) {
     try{
                 const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
