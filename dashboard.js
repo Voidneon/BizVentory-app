@@ -257,7 +257,10 @@ function setupProductEventListeners() {
                 quantityInput.value = newValue;
             }
         } else if (event.target.classList.contains("minus")) {
-            quantityInput.stepDown();
+            const newValue = parseInt(quantityInput.value) - 1;
+            if (newValue >= 1) {
+                quantityInput.value = newValue;
+            }
         } else if (event.target.classList.contains("add-to-cart-btn")) {
             const quantity = parseInt(quantityInput.value);
             if (quantity > currentStock) {
@@ -271,7 +274,7 @@ function setupProductEventListeners() {
 }
 
 /* ====================== */
-/* COMPLETE TRANSACTIONS SYSTEM */
+/* TRANSACTIONS SYSTEM */
 /* ====================== */
 let transactionsUnsubscribe = null;
 let allTransactions = [];
@@ -280,9 +283,9 @@ async function loadTransactions(userId) {
     const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
     if (!transactionsContainer) return;
 
-    // Create search and filter UI if it doesn't exist
+    // Create UI elements if they don't exist
     if (!document.getElementById("transactionsSearchContainer")) {
-        const searchFilterHTML = `
+        transactionsContainer.innerHTML = `
             <div id="transactionsSearchContainer" style="margin-bottom: 20px;">
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                     <input type="text" id="transactionsSearch" placeholder="🔍 Search by Transaction ID..." 
@@ -296,10 +299,23 @@ async function loadTransactions(userId) {
                         <option value="month">This Month</option>
                     </select>
                 </div>
+                <div id="exportButtons" style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button id="exportCSV" class="export-btn" style="background: #4CAF50;">
+                        Export to CSV
+                    </button>
+                    <button id="exportPDF" class="export-btn" style="background: #f44336;">
+                        Export to PDF
+                    </button>
+                </div>
                 <div id="transactionsTableContainer"></div>
             </div>
         `;
-        transactionsContainer.innerHTML = searchFilterHTML;
+
+        // Add event listeners
+        document.getElementById("transactionsSearch").addEventListener("input", applyTransactionsFilters);
+        document.getElementById("transactionsDateFilter").addEventListener("change", applyTransactionsFilters);
+        document.getElementById("exportCSV").addEventListener("click", exportToCSV);
+        document.getElementById("exportPDF").addEventListener("click", exportToPDF);
     }
 
     // Unsubscribe from previous listener if exists
@@ -313,7 +329,7 @@ async function loadTransactions(userId) {
             orderBy("transactionDate", "desc")
         );
 
-        // Real-time listener
+        // Set up real-time listener
         transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
             allTransactions = querySnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -326,80 +342,10 @@ async function loadTransactions(userId) {
             applyTransactionsFilters();
         });
 
-        // Setup event listeners
-        document.getElementById("transactionsSearch").addEventListener("input", applyTransactionsFilters);
-        document.getElementById("transactionsDateFilter").addEventListener("change", applyTransactionsFilters);
-
     } catch (error) {
         console.error("Error loading transactions:", error);
         showBubbleNotification("error", "alert-circle-outline", "Failed to load transactions.");
     }
-}
-
-function applyTransactionsFilters() {
-    const searchTerm = document.getElementById("transactionsSearch")?.value.toLowerCase() || "";
-    const dateFilterValue = document.getElementById("transactionsDateFilter")?.value || "all";
-    const tableContainer = document.getElementById("transactionsTableContainer");
-    
-    if (!tableContainer) return;
-
-    let filteredTransactions = [...allTransactions];
-
-    // Apply date filter
-    if (dateFilterValue !== "all") {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        switch(dateFilterValue) {
-            case "today":
-                filteredTransactions = filteredTransactions.filter(t => {
-                    const transDate = new Date(t.transactionDate);
-                    transDate.setHours(0, 0, 0, 0);
-                    return transDate.getTime() === today.getTime();
-                });
-                break;
-            case "yesterday":
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                filteredTransactions = filteredTransactions.filter(t => {
-                    const transDate = new Date(t.transactionDate);
-                    transDate.setHours(0, 0, 0, 0);
-                    return transDate.getTime() === yesterday.getTime();
-                });
-                break;
-            case "last3days":
-                const threeDaysAgo = new Date();
-                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-                filteredTransactions = filteredTransactions.filter(t => 
-                    new Date(t.transactionDate) >= threeDaysAgo
-                );
-                break;
-            case "week":
-                const startOfWeek = new Date();
-                startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-                filteredTransactions = filteredTransactions.filter(t => 
-                    new Date(t.transactionDate) >= startOfWeek
-                );
-                break;
-            case "month":
-                const startOfMonth = new Date();
-                startOfMonth.setDate(1);
-                filteredTransactions = filteredTransactions.filter(t => 
-                    new Date(t.transactionDate) >= startOfMonth
-                );
-                break;
-        }
-    }
-
-    // Apply search filter
-    if (searchTerm) {
-        filteredTransactions = filteredTransactions.filter(t => 
-            t.transactionId.toLowerCase().includes(searchTerm)
-        );
-    }
-
-    // Render results
-    renderTransactions(filteredTransactions, tableContainer);
 }
 
 function applyTransactionsFilters() {
@@ -491,7 +437,7 @@ function renderTransactions(transactions) {
                     <tr>
                         <td>${t.transactionId}</td>
                         <td>${t.transactionDate}</td>
-                        <td>₱${t.total.toFixed(2)}</td>
+                        <td>${formatCurrency(t.total)}</td>
                         <td>${t.items.length}</td>
                         <td>
                             <button class="btn-view" onclick="showTransactionDetails('${t.id}')">
@@ -560,7 +506,7 @@ function exportToPDF() {
     const data = filtered.map(t => [
         t.transactionId,
         t.transactionDate,
-        `₱${t.total.toFixed(2)}`,
+        formatCurrency(t.total),
         t.items.length
     ]);
     
@@ -588,9 +534,9 @@ function getFilteredTransactions() {
 }
 
 /* ====================== */
-/* TRANSACTION DETAILS POPUP */
+/* TRANSACTION DETAILS */
 /* ====================== */
-window.showTransactionDetails = async function(transactionId) {
+window.showTransactionDetails = async function (transactionId) {
     try {
         const user = auth.currentUser;
         if (!user) return;
@@ -602,22 +548,17 @@ window.showTransactionDetails = async function(transactionId) {
         }
 
         const transaction = transactionDoc.data();
-        
-        // Create popup element
+
         const popup = document.createElement("div");
         popup.className = "transaction-popup active";
         popup.innerHTML = `
             <div class="popup-content">
                 <span class="close-popup" onclick="closePopup()">&times;</span>
                 <h2>Transaction Details</h2>
+                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                <p><strong>Date:</strong> ${transaction.transactionDate}</p>
                 
-                <div class="transaction-header">
-                    <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
-                    <p><strong>Date:</strong> ${transaction.transactionDate}</p>
-                    <p><strong>Total Amount:</strong> ₱${transaction.total.toFixed(2)}</p>
-                </div>
-                
-                <table class="items-table">
+                <table>
                     <thead>
                         <tr>
                             <th>Item</th>
@@ -631,26 +572,29 @@ window.showTransactionDetails = async function(transactionId) {
                             <tr>
                                 <td>${item.itemName}</td>
                                 <td>${item.quantity}</td>
-                                <td>₱${item.unitPrice.toFixed(2)}</td>
-                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                                <td>${formatCurrency(item.unitPrice)}</td>
+                                <td>${formatCurrency(item.unitPrice * item.quantity)}</td>
                             </tr>
                         `).join("")}
                     </tbody>
                 </table>
                 
-                <button class="close-btn" onclick="closePopup()">Close</button>
+                <div class="transaction-total">
+                    <strong>Total Amount: ${formatCurrency(transaction.total)}</strong>
+                </div>
+                
+                <button onclick="closePopup()">Close</button>
             </div>
         `;
 
         document.body.appendChild(popup);
-        
     } catch (error) {
         console.error("Error showing transaction details:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load transaction details");
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load transaction details.");
     }
 };
 
-window.closePopup = function() {
+window.closePopup = function () {
     const popup = document.querySelector(".transaction-popup");
     if (popup) {
         popup.remove();
@@ -903,74 +847,6 @@ async function loadRecentProducts(userId) {
         showBubbleNotification("error", "alert-circle-outline", "Failed to load recent products.");
     }
 }
-
-/* ====================== */
-/* TRANSACTION DETAILS */
-/* ====================== */
-window.showTransactionDetails = async function (transactionId) {
-    try {
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const transactionDoc = await getDoc(doc(db, "users", user.uid, "transactions", transactionId));
-        if (!transactionDoc.exists()) {
-            showBubbleNotification("error", "alert-circle-outline", "Transaction not found");
-            return;
-        }
-
-        const transaction = transactionDoc.data();
-
-        const popup = document.createElement("div");
-        popup.className = "transaction-popup active";
-        popup.innerHTML = `
-            <div class="popup-content">
-                <span class="close-popup" onclick="closePopup()">&times;</span>
-                <h2>Transaction Details</h2>
-                <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
-                <p><strong>Date:</strong> ${transaction.transactionDate}</p>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${transaction.items.map(item => `
-                            <tr>
-                                <td>${item.itemName}</td>
-                                <td>${item.quantity}</td>
-                                <td>${formatCurrency(item.unitPrice)}</td>
-                                <td>${formatCurrency(item.unitPrice * item.quantity)}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-                
-                <div class="transaction-total">
-                    <strong>Total Amount: ${formatCurrency(transaction.total)}</strong>
-                </div>
-                
-                <button onclick="closePopup()">Close</button>
-            </div>
-        `;
-
-        document.body.appendChild(popup);
-    } catch (error) {
-        console.error("Error showing transaction details:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load transaction details.");
-    }
-};
-
-window.closePopup = function () {
-    const popup = document.querySelector(".transaction-popup");
-    if (popup) {
-        popup.remove();
-    }
-};
 
 /* ====================== */
 /* NAVIGATION */
