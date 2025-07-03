@@ -15,6 +15,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
 
+/* ====================== */
+/* CURRENCY FORMATTING */
+/* ====================== */
+function formatCurrency(amount) {
+    if (amount === null || amount === undefined || amount === '') return '₱0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     onAuthStateChanged(auth, (user) => {
         if (!user) {
@@ -117,7 +126,7 @@ async function loadProductsByCategory(userId) {
                     ${categories[category].map(product => `
                         <tr>
                             <td>${product.name}</td>
-                            <td>₱${product.price.toFixed(2)}</td>
+                            <td>${formatCurrency(product.price)}</td>
                             <td class="actions">
                                 <button class="btn-modify" data-id="${product.id}">
                                     <ion-icon name="create-outline"></ion-icon>
