@@ -24,10 +24,7 @@ let notificationQueue = [];
 let activeNotifications = 0;
 
 function showBubbleNotifications(notifications) {
-    // Clear existing queue
     notificationQueue = [];
-    
-    // Show first batch immediately
     const toShowNow = notifications.slice(0, MAX_NOTIFICATIONS);
     notificationQueue = notifications.slice(MAX_NOTIFICATIONS);
     
@@ -197,11 +194,11 @@ async function loadProducts(userId) {
     const productsContainer = document.querySelector(".products-container");
     if (!productsContainer) return;
 
-    productsContainer.innerHTML = "";
-
     try {
         const q = query(collection(db, "users", userId, "products"), orderBy("name"));
         const querySnapshot = await getDocs(q);
+
+        productsContainer.innerHTML = "";
 
         querySnapshot.forEach((doc) => {
             const product = doc.data();
@@ -242,13 +239,25 @@ function setupProductEventListeners() {
         const productName = productBox.querySelector("p").textContent.split(" - ")[0];
         const price = parseFloat(productBox.querySelector("p").textContent.split("₱")[1]);
         const quantityInput = productBox.querySelector(".quantity-input");
+        const stockElement = productBox.querySelector("small");
+        const currentStock = parseInt(stockElement.textContent.split(": ")[1]);
         
         if (event.target.classList.contains("plus")) {
-            quantityInput.stepUp();
+            const newValue = parseInt(quantityInput.value) + 1;
+            if (newValue <= currentStock) {
+                quantityInput.value = newValue;
+            }
         } else if (event.target.classList.contains("minus")) {
-            quantityInput.stepDown();
+            const newValue = parseInt(quantityInput.value) - 1;
+            if (newValue >= 1) {
+                quantityInput.value = newValue;
+            }
         } else if (event.target.classList.contains("add-to-cart-btn")) {
             const quantity = parseInt(quantityInput.value);
+            if (quantity > currentStock) {
+                showBubbleNotification("error", "close-circle-outline", `Only ${currentStock} available in stock!`);
+                return;
+            }
             addToCart(productId, productName, price, quantity);
             quantityInput.value = 1;
         }
@@ -256,15 +265,49 @@ function setupProductEventListeners() {
 }
 
 /* ====================== */
-/* TRANSACTIONS SYSTEM */
+/* COMPLETE TRANSACTIONS SYSTEM */
 /* ====================== */
 let transactionsUnsubscribe = null;
+let allTransactions = [];
 
 async function loadTransactions(userId) {
     const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
     if (!transactionsContainer) return;
 
-    transactionsContainer.innerHTML = "Loading transactions...";
+    // Create UI elements
+    if (!document.getElementById("transactionsSearchContainer")) {
+        transactionsContainer.innerHTML = `
+            <div id="transactionsSearchContainer" style="margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="transactionsSearch" placeholder="🔍 Search by Transaction ID..." 
+                           style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;">
+                    <select id="transactionsDateFilter" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="last3days">Last 3 Days</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+                <div id="exportButtons" style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button id="exportCSV" class="export-btn" style="background: #4CAF50;">
+                        Export to CSV
+                    </button>
+                    <button id="exportPDF" class="export-btn" style="background: #f44336;">
+                        Export to PDF
+                    </button>
+                </div>
+                <div id="transactionsTableContainer"></div>
+            </div>
+        `;
+
+        // Add event listeners
+        document.getElementById("transactionsSearch").addEventListener("input", applyTransactionsFilters);
+        document.getElementById("transactionsDateFilter").addEventListener("change", applyTransactionsFilters);
+        document.getElementById("exportCSV").addEventListener("click", exportToCSV);
+        document.getElementById("exportPDF").addEventListener("click", exportToPDF);
+    }
 
     // Unsubscribe from previous listener if exists
     if (transactionsUnsubscribe) {
@@ -277,52 +320,276 @@ async function loadTransactions(userId) {
             orderBy("transactionDate", "desc")
         );
 
-        // Set up real-time listener
+        // Real-time listener
         transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
-            const transactions = querySnapshot.docs.map(doc => {
-                return {
-                    id: doc.id,
-                    ...doc.data()
-                };
-            });
-            renderTransactions(transactions, transactionsContainer);
+            allTransactions = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                dateObj: new Date(doc.data().transactionDate)
+            }));
+            applyTransactionsFilters();
         });
 
     } catch (error) {
         console.error("Error loading transactions:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load transactions.");
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load transactions");
     }
 }
 
-function renderTransactions(transactions, container) {
-    container.innerHTML = "";
-
-    const table = document.createElement("table");
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>Transaction ID</th>
-                <th>Date and Time</th>
-                <th>Total Amount</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${transactions.map(transaction => `
-                <tr>
-                    <td>${transaction.transactionId}</td>
-                    <td>${transaction.transactionDate}</td>
-                    <td>₱${transaction.total.toFixed(2)}</td>
-                    <td class="actions">
-                        <button class="btn-view" onclick="showTransactionDetails('${transaction.id}')">View Details</button>
-                    </td>
-                </tr>
-            `).join("")}
-        </tbody>
-    `;
-
-    container.appendChild(table);
+function applyTransactionsFilters() {
+    const searchTerm = document.getElementById("transactionsSearch")?.value.toLowerCase() || "";
+    const dateFilter = document.getElementById("transactionsDateFilter")?.value || "all";
+    const filtered = filterTransactions(allTransactions, searchTerm, dateFilter);
+    renderTransactions(filtered);
 }
+
+function filterTransactions(transactions, searchTerm, dateFilter) {
+    let results = [...transactions];
+    
+    // Date filtering
+    if (dateFilter !== "all") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        switch(dateFilter) {
+            case "today":
+                results = results.filter(t => {
+                    const d = new Date(t.transactionDate);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() === today.getTime();
+                });
+                break;
+                
+            case "yesterday":
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                results = results.filter(t => {
+                    const d = new Date(t.transactionDate);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() === yesterday.getTime();
+                });
+                break;
+                
+            case "last3days":
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                results = results.filter(t => new Date(t.transactionDate) >= threeDaysAgo);
+                break;
+                
+            case "week":
+                const startOfWeek = new Date();
+                startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                results = results.filter(t => new Date(t.transactionDate) >= startOfWeek);
+                break;
+                
+            case "month":
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                results = results.filter(t => new Date(t.transactionDate) >= startOfMonth);
+                break;
+        }
+    }
+    
+    // Search filtering
+    if (searchTerm) {
+        results = results.filter(t => 
+            t.transactionId.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    return results;
+}
+
+function renderTransactions(transactions) {
+    const container = document.getElementById("transactionsTableContainer");
+    if (!container) return;
+    
+    if (transactions.length === 0) {
+        container.innerHTML = `<p class="no-transactions">No matching transactions found</p>`;
+        return;
+    }
+    
+    container.innerHTML = `
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Items</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${transactions.map(t => `
+                    <tr>
+                        <td>${t.transactionId}</td>
+                        <td>${t.transactionDate}</td>
+                        <td>₱${t.total.toFixed(2)}</td>
+                        <td>${t.items.length}</td>
+                        <td>
+                            <button class="btn-view" onclick="showTransactionDetails('${t.id}')">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function exportToCSV() {
+    const filtered = getFilteredTransactions();
+    if (filtered.length === 0) {
+        showBubbleNotification("warning", "alert-circle-outline", "No transactions to export");
+        return;
+    }
+
+    let csv = "Transaction ID,Date,Total,Items Count\n";
+    filtered.forEach(t => {
+        csv += `"${t.transactionId}","${t.transactionDate}",${t.total},${t.items.length}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    
+    showBubbleNotification("success", "checkmark-circle-outline", "CSV exported successfully");
+}
+
+function exportToPDF() {
+    const filtered = getFilteredTransactions();
+    if (filtered.length === 0) {
+        showBubbleNotification("warning", "alert-circle-outline", "No transactions to export");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Transaction Report", 14, 15);
+    
+    // Filters info
+    doc.setFontSize(10);
+    const dateFilter = document.getElementById("transactionsDateFilter").value;
+    const searchTerm = document.getElementById("transactionsSearch").value;
+    let filters = "All Transactions";
+    if (dateFilter !== "all") {
+        filters = `${document.getElementById("transactionsDateFilter").selectedOptions[0].text}`;
+    }
+    if (searchTerm) {
+        filters += `, Search: "${searchTerm}"`;
+    }
+    doc.text(filters, 14, 22);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 29);
+    
+    // Table data
+    const headers = [["ID", "Date", "Total", "Items"]];
+    const data = filtered.map(t => [
+        t.transactionId,
+        t.transactionDate,
+        `₱${t.total.toFixed(2)}`,
+        t.items.length
+    ]);
+    
+    // Generate table
+    doc.autoTable({
+        head: headers,
+        body: data,
+        startY: 35,
+        headStyles: {
+            fillColor: [106, 27, 154] // Purple
+        },
+        styles: {
+            fontSize: 8
+        }
+    });
+    
+    doc.save(`transactions_${new Date().toISOString().slice(0,10)}.pdf`);
+    showBubbleNotification("success", "checkmark-circle-outline", "PDF exported successfully");
+}
+
+function getFilteredTransactions() {
+    const searchTerm = document.getElementById("transactionsSearch")?.value.toLowerCase() || "";
+    const dateFilter = document.getElementById("transactionsDateFilter")?.value || "all";
+    return filterTransactions(allTransactions, searchTerm, dateFilter);
+}
+
+/* ====================== */
+/* TRANSACTION DETAILS POPUP */
+/* ====================== */
+window.showTransactionDetails = async function(transactionId) {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const transactionDoc = await getDoc(doc(db, "users", user.uid, "transactions", transactionId));
+        if (!transactionDoc.exists()) {
+            showBubbleNotification("error", "alert-circle-outline", "Transaction not found");
+            return;
+        }
+
+        const transaction = transactionDoc.data();
+        
+        // Create popup element
+        const popup = document.createElement("div");
+        popup.className = "transaction-popup active";
+        popup.innerHTML = `
+            <div class="popup-content">
+                <span class="close-popup" onclick="closePopup()">&times;</span>
+                <h2>Transaction Details</h2>
+                
+                <div class="transaction-header">
+                    <p><strong>Transaction ID:</strong> ${transaction.transactionId}</p>
+                    <p><strong>Date:</strong> ${transaction.transactionDate}</p>
+                    <p><strong>Total Amount:</strong> ₱${transaction.total.toFixed(2)}</p>
+                </div>
+                
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transaction.items.map(item => `
+                            <tr>
+                                <td>${item.itemName}</td>
+                                <td>${item.quantity}</td>
+                                <td>₱${item.unitPrice.toFixed(2)}</td>
+                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+                
+                <button class="close-btn" onclick="closePopup()">Close</button>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+        
+    } catch (error) {
+        console.error("Error showing transaction details:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load transaction details");
+    }
+};
+
+window.closePopup = function() {
+    const popup = document.querySelector(".transaction-popup");
+    if (popup) {
+        popup.remove();
+    }
+};
 
 /* ====================== */
 /* PURCHASE SYSTEM */
@@ -389,6 +656,9 @@ async function completePurchase(userId) {
         saveCart();
         updateCart();
         updatePurchaseButton();
+
+        // Reload products to reflect updated quantities
+        await loadProducts(userId);
 
         showBubbleNotification("success", "checkmark-circle-outline", "Purchase completed successfully!");
 
@@ -682,7 +952,6 @@ function setupCartEventListeners() {
         }
     });
 
-    // Handle direct quantity input changes
     cartContainer.addEventListener("change", (event) => {
         if (event.target.classList.contains("cart-quantity")) {
             const cartBox = event.target.closest(".cart-box");
@@ -691,54 +960,6 @@ function setupCartEventListeners() {
             const itemId = cartBox.dataset.itemId;
             const newQuantity = parseInt(event.target.value);
             setCartItemQuantity(itemId, newQuantity);
-        }
-    });
-}
-
-/* ====================== */
-/* INITIALIZATION */
-/* ====================== */
-function initApp() {
-    setupNavigation();
-    setupCartEventListeners();
-    updateCart();
-    updatePurchaseButton();
-
-    // Setup complete purchase button
-    const completePurchaseBtn = document.getElementById("completePurchaseBtn");
-    if (completePurchaseBtn) {
-        completePurchaseBtn.addEventListener("click", () => {
-            const user = auth.currentUser;
-            if (user) {
-                completePurchase(user.uid);
-            }
-        });
-    }
-
-    // Setup search functionality
-    window.filterProducts = function () {
-        const searchQuery = document.getElementById("search")?.value.toLowerCase();
-        if (!searchQuery) return;
-
-        const products = document.querySelectorAll(".product-box");
-        products.forEach(product => {
-            const productName = product.querySelector("p").textContent.toLowerCase();
-            product.style.display = productName.includes(searchQuery) ? "flex" : "none";
-        });
-    };
-
-    // Auth state listener
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loadProducts(user.uid);
-            loadNotifications(user.uid);
-            loadProductsForAnalytics(user.uid);
-            loadTransactions(user.uid);
-            loadRecentProducts(user.uid);
-            loadDashboardCounts(user.uid)
-        } else {
-            showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
-            window.location.href = "login.html";
         }
     });
 }
@@ -766,7 +987,6 @@ async function loadNotifications(userId) {
             const expirationDate = new Date(product.expirationDate);
             const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
 
-            // Low Stock Notification
             if (product.quantity <= (product.lowStockThreshold || 5)) {
                 notifications.push({
                     type: "warning",
@@ -775,7 +995,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Expiring Soon Notification
             if (daysUntilExpiration <= 7 && daysUntilExpiration >= 0) {
                 notifications.push({
                     type: "warning",
@@ -784,7 +1003,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Out of Stock Notification
             if (product.quantity === 0) {
                 notifications.push({
                     type: "error",
@@ -793,7 +1011,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Expired Notification
             if (daysUntilExpiration < 0) {
                 notifications.push({
                     type: "error",
@@ -803,7 +1020,6 @@ async function loadNotifications(userId) {
             }
         });
 
-        // Display in notifications section
         notifications.forEach(notification => {
             const notificationElement = document.createElement("div");
             notificationElement.className = `notification ${notification.type === "error" ? "out-of-stock" : 
@@ -812,7 +1028,6 @@ async function loadNotifications(userId) {
             notificationsContainer.appendChild(notificationElement);
         });
 
-        // Show as bubble notifications
         showBubbleNotifications(notifications);
 
     } catch (error) {
@@ -826,15 +1041,11 @@ async function loadDashboardCounts(userId) {
         const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
         const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
 
-        // Update inventory count
         document.getElementById("inventoryCount").textContent = productsSnapshot.size;
-
-        // Update total transaction count
         document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
 
-        // Count today’s transactions
         const today = new Date();
-        const todayString = today.toLocaleDateString(); // e.g., "6/30/2025"
+        const todayString = today.toLocaleDateString();
 
         let todayCount = 0;
         transactionsSnapshot.forEach(doc => {
@@ -851,6 +1062,49 @@ async function loadDashboardCounts(userId) {
     }
 }
 
+/* ====================== */
+/* INITIALIZATION */
+/* ====================== */
+function initApp() {
+    setupNavigation();
+    setupCartEventListeners();
+    updateCart();
+    updatePurchaseButton();
 
-// Start the app
+    const completePurchaseBtn = document.getElementById("completePurchaseBtn");
+    if (completePurchaseBtn) {
+        completePurchaseBtn.addEventListener("click", () => {
+            const user = auth.currentUser;
+            if (user) {
+                completePurchase(user.uid);
+            }
+        });
+    }
+
+    window.filterProducts = function () {
+        const searchQuery = document.getElementById("search")?.value.toLowerCase();
+        if (!searchQuery) return;
+
+        const products = document.querySelectorAll(".product-box");
+        products.forEach(product => {
+            const productName = product.querySelector("p").textContent.toLowerCase();
+            product.style.display = productName.includes(searchQuery) ? "flex" : "none";
+        });
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loadProducts(user.uid);
+            loadNotifications(user.uid);
+            loadProductsForAnalytics(user.uid);
+            loadTransactions(user.uid);
+            loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid);
+        } else {
+            showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
+            window.location.href = "login.html";
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", initApp);

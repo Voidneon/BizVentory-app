@@ -613,4 +613,44 @@ tr:hover {
     .product-cart-container {
         flex-direction: column;
     }
+
+    .export-btn {
+    padding: 8px 12px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.no-transactions {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.transactions-table th {
+    background-color: #f3e5f5;
+    padding: 10px;
+    text-align: left;
+}
+
+.transactions-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.btn-view {
+    background: #6a1b9a;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
 }
