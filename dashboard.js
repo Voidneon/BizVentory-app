@@ -735,6 +735,7 @@ function initApp() {
             loadProductsForAnalytics(user.uid);
             loadTransactions(user.uid);
             loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid)
         } else {
             showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
             window.location.href = "login.html";
@@ -819,6 +820,37 @@ async function loadNotifications(userId) {
         showBubbleNotification("error", "alert-circle-outline", "Failed to load notifications.");
     }
 }
+
+async function loadDashboardCounts(userId) {
+    try {
+        const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
+        const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
+
+        // Update inventory count
+        document.getElementById("inventoryCount").textContent = productsSnapshot.size;
+
+        // Update total transaction count
+        document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
+
+        // Count today’s transactions
+        const today = new Date();
+        const todayString = today.toLocaleDateString(); // e.g., "6/30/2025"
+
+        let todayCount = 0;
+        transactionsSnapshot.forEach(doc => {
+            const transaction = doc.data();
+            if (transaction.transactionDate?.includes(todayString)) {
+                todayCount++;
+            }
+        });
+
+        document.getElementById("todayTransactionCount").textContent = todayCount;
+
+    } catch (error) {
+        console.error("❌ Error loading dashboard counts:", error);
+    }
+}
+
 
 // Start the app
 document.addEventListener("DOMContentLoaded", initApp);
