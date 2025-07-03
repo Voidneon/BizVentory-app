@@ -16,6 +16,15 @@ const db = getFirestore(app);
 const auth = getAuth();
 
 /* ====================== */
+/* CURRENCY FORMATTING */
+/* ====================== */
+function formatCurrency(amount) {
+    if (amount === null || amount === undefined || amount === '') return '₱0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+/* ====================== */
 /* NOTIFICATION SYSTEM */
 /* ====================== */
 const MAX_NOTIFICATIONS = 3;
@@ -24,10 +33,7 @@ let notificationQueue = [];
 let activeNotifications = 0;
 
 function showBubbleNotifications(notifications) {
-    // Clear existing queue
     notificationQueue = [];
-    
-    // Show first batch immediately
     const toShowNow = notifications.slice(0, MAX_NOTIFICATIONS);
     notificationQueue = notifications.slice(MAX_NOTIFICATIONS);
     
@@ -171,7 +177,7 @@ function updateCart() {
                     <button class="quantity-btn minus">-</button>
                     <input type="number" class="cart-quantity" value="${item.quantity}" min="1">
                     <button class="quantity-btn plus">+</button>
-                    <span class="item-price">₱${(item.price * item.quantity).toFixed(2)}</span>
+                    <span class="item-price">${formatCurrency(item.price * item.quantity)}</span>
                 </div>
             </div>
             <button class="remove-btn">Remove</button>
@@ -181,7 +187,7 @@ function updateCart() {
     });
 
     if (document.getElementById("total")) {
-        document.getElementById("total").textContent = totalPrice.toFixed(2);
+        document.getElementById("total").textContent = formatCurrency(totalPrice);
     }
     updatePurchaseButton();
 }
@@ -197,11 +203,11 @@ async function loadProducts(userId) {
     const productsContainer = document.querySelector(".products-container");
     if (!productsContainer) return;
 
-    productsContainer.innerHTML = "";
-
     try {
         const q = query(collection(db, "users", userId, "products"), orderBy("name"));
         const querySnapshot = await getDocs(q);
+
+        productsContainer.innerHTML = "";
 
         querySnapshot.forEach((doc) => {
             const product = doc.data();
@@ -210,7 +216,7 @@ async function loadProducts(userId) {
             productBox.dataset.productId = doc.id;
 
             productBox.innerHTML = `
-                <p>${product.name} - ₱${product.price.toFixed(2)}</p>
+                <p>${product.name} - ${formatCurrency(product.price)}</p>
                 <small>Stock: ${product.quantity}</small>
                 <div class="quantity-controls">
                     <button class="quantity-btn minus">-</button>
@@ -242,13 +248,25 @@ function setupProductEventListeners() {
         const productName = productBox.querySelector("p").textContent.split(" - ")[0];
         const price = parseFloat(productBox.querySelector("p").textContent.split("₱")[1]);
         const quantityInput = productBox.querySelector(".quantity-input");
+        const stockElement = productBox.querySelector("small");
+        const currentStock = parseInt(stockElement.textContent.split(": ")[1]);
         
         if (event.target.classList.contains("plus")) {
-            quantityInput.stepUp();
+            const newValue = parseInt(quantityInput.value) + 1;
+            if (newValue <= currentStock) {
+                quantityInput.value = newValue;
+            }
         } else if (event.target.classList.contains("minus")) {
-            quantityInput.stepDown();
+            const newValue = parseInt(quantityInput.value) - 1;
+            if (newValue >= 1) {
+                quantityInput.value = newValue;
+            }
         } else if (event.target.classList.contains("add-to-cart-btn")) {
             const quantity = parseInt(quantityInput.value);
+            if (quantity > currentStock) {
+                showBubbleNotification("error", "close-circle-outline", `Only ${currentStock} available in stock!`);
+                return;
+            }
             addToCart(productId, productName, price, quantity);
             quantityInput.value = 1;
         }
@@ -256,15 +274,36 @@ function setupProductEventListeners() {
 }
 
 /* ====================== */
-/* TRANSACTIONS SYSTEM */
+/* TRANSACTIONS SYSTEM - WORKING VERSION */
 /* ====================== */
 let transactionsUnsubscribe = null;
+let allTransactions = [];
 
 async function loadTransactions(userId) {
     const transactionsContainer = document.querySelector(".userDetailsTable > .transactions-table");
     if (!transactionsContainer) return;
 
-    transactionsContainer.innerHTML = "Loading transactions...";
+    // Create search and filter UI if it doesn't exist
+    if (!document.getElementById("transactionsSearchContainer")) {
+        const searchFilterHTML = `
+            <div id="transactionsSearchContainer" style="margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="transactionsSearch" placeholder="🔍 Search by Transaction ID..." 
+                           style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;">
+                    <select id="transactionsDateFilter" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="last3days">Last 3 Days</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+                <div id="transactionsTableContainer"></div>
+            </div>
+        `;
+        transactionsContainer.innerHTML = searchFilterHTML;
+    }
 
     // Unsubscribe from previous listener if exists
     if (transactionsUnsubscribe) {
@@ -279,14 +318,20 @@ async function loadTransactions(userId) {
 
         // Set up real-time listener
         transactionsUnsubscribe = onSnapshot(q, (querySnapshot) => {
-            const transactions = querySnapshot.docs.map(doc => {
+            allTransactions = querySnapshot.docs.map(doc => {
+                const data = doc.data();
                 return {
                     id: doc.id,
-                    ...doc.data()
+                    ...data,
+                    dateObj: new Date(data.transactionDate)
                 };
             });
-            renderTransactions(transactions, transactionsContainer);
+            applyTransactionsFilters();
         });
+
+        // Setup event listeners
+        document.getElementById("transactionsSearch").addEventListener("input", applyTransactionsFilters);
+        document.getElementById("transactionsDateFilter").addEventListener("change", applyTransactionsFilters);
 
     } catch (error) {
         console.error("Error loading transactions:", error);
@@ -294,34 +339,106 @@ async function loadTransactions(userId) {
     }
 }
 
-function renderTransactions(transactions, container) {
-    container.innerHTML = "";
+function applyTransactionsFilters() {
+    const searchTerm = document.getElementById("transactionsSearch")?.value.toLowerCase() || "";
+    const dateFilterValue = document.getElementById("transactionsDateFilter")?.value || "all";
+    const tableContainer = document.getElementById("transactionsTableContainer");
+    
+    if (!tableContainer) return;
 
-    const table = document.createElement("table");
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>Transaction ID</th>
-                <th>Date and Time</th>
-                <th>Total Amount</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${transactions.map(transaction => `
+    let filteredTransactions = [...allTransactions];
+
+    // Apply date filter
+    if (dateFilterValue !== "all") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        switch(dateFilterValue) {
+            case "today":
+                filteredTransactions = filteredTransactions.filter(t => {
+                    const transDate = new Date(t.transactionDate);
+                    transDate.setHours(0, 0, 0, 0);
+                    return transDate.getTime() === today.getTime();
+                });
+                break;
+            case "yesterday":
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                filteredTransactions = filteredTransactions.filter(t => {
+                    const transDate = new Date(t.transactionDate);
+                    transDate.setHours(0, 0, 0, 0);
+                    return transDate.getTime() === yesterday.getTime();
+                });
+                break;
+            case "last3days":
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                filteredTransactions = filteredTransactions.filter(t => 
+                    new Date(t.transactionDate) >= threeDaysAgo
+                );
+                break;
+            case "week":
+                const startOfWeek = new Date();
+                startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                filteredTransactions = filteredTransactions.filter(t => 
+                    new Date(t.transactionDate) >= startOfWeek
+                );
+                break;
+            case "month":
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                filteredTransactions = filteredTransactions.filter(t => 
+                    new Date(t.transactionDate) >= startOfMonth
+                );
+                break;
+        }
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+        filteredTransactions = filteredTransactions.filter(t => 
+            t.transactionId.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    // Render results
+    renderTransactions(filteredTransactions, tableContainer);
+}
+
+function renderTransactions(transactions, container) {
+    if (!container) return;
+
+    if (transactions.length === 0) {
+        container.innerHTML = "<p>No transactions found</p>";
+        return;
+    }
+
+    const tableHTML = `
+        <table>
+            <thead>
                 <tr>
-                    <td>${transaction.transactionId}</td>
-                    <td>${transaction.transactionDate}</td>
-                    <td>₱${transaction.total.toFixed(2)}</td>
-                    <td class="actions">
-                        <button class="btn-view" onclick="showTransactionDetails('${transaction.id}')">View Details</button>
-                    </td>
+                    <th>Transaction ID</th>
+                    <th>Date and Time</th>
+                    <th>Total Amount</th>
+                    <th>Actions</th>
                 </tr>
-            `).join("")}
-        </tbody>
+            </thead>
+            <tbody>
+                ${transactions.map(transaction => `
+                    <tr>
+                        <td>${transaction.transactionId}</td>
+                        <td>${transaction.transactionDate}</td>
+                        <td>${formatCurrency(transaction.total)}</td>
+                        <td class="actions">
+                            <button class="btn-view" onclick="showTransactionDetails('${transaction.id}')">View Details</button>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
     `;
 
-    container.appendChild(table);
+    container.innerHTML = tableHTML;
 }
 
 /* ====================== */
@@ -389,6 +506,9 @@ async function completePurchase(userId) {
         saveCart();
         updateCart();
         updatePurchaseButton();
+
+        // Reload products to reflect updated quantities
+        await loadProducts(userId);
 
         showBubbleNotification("success", "checkmark-circle-outline", "Purchase completed successfully!");
 
@@ -552,7 +672,7 @@ async function loadRecentProducts(userId) {
             row.innerHTML = `
                 <td>${product.name}</td>
                 <td>${product.category}</td>
-                <td>₱${product.price.toFixed(2)}</td>
+                <td>${formatCurrency(product.price)}</td>
                 <td>${product.quantity}</td>
                 <td class="actions">
                     <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
@@ -607,15 +727,15 @@ window.showTransactionDetails = async function (transactionId) {
                             <tr>
                                 <td>${item.itemName}</td>
                                 <td>${item.quantity}</td>
-                                <td>₱${item.unitPrice.toFixed(2)}</td>
-                                <td>₱${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                                <td>${formatCurrency(item.unitPrice)}</td>
+                                <td>${formatCurrency(item.unitPrice * item.quantity)}</td>
                             </tr>
                         `).join("")}
                     </tbody>
                 </table>
                 
                 <div class="transaction-total">
-                    <strong>Total Amount: ₱${transaction.total.toFixed(2)}</strong>
+                    <strong>Total Amount: ${formatCurrency(transaction.total)}</strong>
                 </div>
                 
                 <button onclick="closePopup()">Close</button>
@@ -682,7 +802,6 @@ function setupCartEventListeners() {
         }
     });
 
-    // Handle direct quantity input changes
     cartContainer.addEventListener("change", (event) => {
         if (event.target.classList.contains("cart-quantity")) {
             const cartBox = event.target.closest(".cart-box");
@@ -691,54 +810,6 @@ function setupCartEventListeners() {
             const itemId = cartBox.dataset.itemId;
             const newQuantity = parseInt(event.target.value);
             setCartItemQuantity(itemId, newQuantity);
-        }
-    });
-}
-
-/* ====================== */
-/* INITIALIZATION */
-/* ====================== */
-function initApp() {
-    setupNavigation();
-    setupCartEventListeners();
-    updateCart();
-    updatePurchaseButton();
-
-    // Setup complete purchase button
-    const completePurchaseBtn = document.getElementById("completePurchaseBtn");
-    if (completePurchaseBtn) {
-        completePurchaseBtn.addEventListener("click", () => {
-            const user = auth.currentUser;
-            if (user) {
-                completePurchase(user.uid);
-            }
-        });
-    }
-
-    // Setup search functionality
-    window.filterProducts = function () {
-        const searchQuery = document.getElementById("search")?.value.toLowerCase();
-        if (!searchQuery) return;
-
-        const products = document.querySelectorAll(".product-box");
-        products.forEach(product => {
-            const productName = product.querySelector("p").textContent.toLowerCase();
-            product.style.display = productName.includes(searchQuery) ? "flex" : "none";
-        });
-    };
-
-    // Auth state listener
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loadProducts(user.uid);
-            loadNotifications(user.uid);
-            loadProductsForAnalytics(user.uid);
-            loadTransactions(user.uid);
-            loadRecentProducts(user.uid);
-            loadDashboardCounts(user.uid)
-        } else {
-            showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
-            window.location.href = "login.html";
         }
     });
 }
@@ -766,7 +837,6 @@ async function loadNotifications(userId) {
             const expirationDate = new Date(product.expirationDate);
             const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
 
-            // Low Stock Notification
             if (product.quantity <= (product.lowStockThreshold || 5)) {
                 notifications.push({
                     type: "warning",
@@ -775,7 +845,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Expiring Soon Notification
             if (daysUntilExpiration <= 7 && daysUntilExpiration >= 0) {
                 notifications.push({
                     type: "warning",
@@ -784,7 +853,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Out of Stock Notification
             if (product.quantity === 0) {
                 notifications.push({
                     type: "error",
@@ -793,7 +861,6 @@ async function loadNotifications(userId) {
                 });
             }
 
-            // Expired Notification
             if (daysUntilExpiration < 0) {
                 notifications.push({
                     type: "error",
@@ -803,7 +870,6 @@ async function loadNotifications(userId) {
             }
         });
 
-        // Display in notifications section
         notifications.forEach(notification => {
             const notificationElement = document.createElement("div");
             notificationElement.className = `notification ${notification.type === "error" ? "out-of-stock" : 
@@ -812,7 +878,6 @@ async function loadNotifications(userId) {
             notificationsContainer.appendChild(notificationElement);
         });
 
-        // Show as bubble notifications
         showBubbleNotifications(notifications);
 
     } catch (error) {
@@ -826,15 +891,11 @@ async function loadDashboardCounts(userId) {
         const productsSnapshot = await getDocs(collection(db, "users", userId, "products"));
         const transactionsSnapshot = await getDocs(collection(db, "users", userId, "transactions"));
 
-        // Update inventory count
         document.getElementById("inventoryCount").textContent = productsSnapshot.size;
-
-        // Update total transaction count
         document.getElementById("transactionCount").textContent = transactionsSnapshot.size;
 
-        // Count today’s transactions
         const today = new Date();
-        const todayString = today.toLocaleDateString(); // e.g., "6/30/2025"
+        const todayString = today.toLocaleDateString();
 
         let todayCount = 0;
         transactionsSnapshot.forEach(doc => {
@@ -851,6 +912,49 @@ async function loadDashboardCounts(userId) {
     }
 }
 
+/* ====================== */
+/* INITIALIZATION */
+/* ====================== */
+function initApp() {
+    setupNavigation();
+    setupCartEventListeners();
+    updateCart();
+    updatePurchaseButton();
 
-// Start the app
+    const completePurchaseBtn = document.getElementById("completePurchaseBtn");
+    if (completePurchaseBtn) {
+        completePurchaseBtn.addEventListener("click", () => {
+            const user = auth.currentUser;
+            if (user) {
+                completePurchase(user.uid);
+            }
+        });
+    }
+
+    window.filterProducts = function () {
+        const searchQuery = document.getElementById("search")?.value.toLowerCase();
+        if (!searchQuery) return;
+
+        const products = document.querySelectorAll(".product-box");
+        products.forEach(product => {
+            const productName = product.querySelector("p").textContent.toLowerCase();
+            product.style.display = productName.includes(searchQuery) ? "flex" : "none";
+        });
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loadProducts(user.uid);
+            loadNotifications(user.uid);
+            loadProductsForAnalytics(user.uid);
+            loadTransactions(user.uid);
+            loadRecentProducts(user.uid);
+            loadDashboardCounts(user.uid);
+        } else {
+            showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
+            window.location.href = "login.html";
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", initApp);

@@ -15,6 +15,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);   
 const auth = getAuth();
 
+/* ====================== */
+/* CURRENCY FORMATTING */
+/* ====================== */
+function formatCurrency(amount) {
+    if (amount === null || amount === undefined || amount === '') return '₱0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.querySelector("#addProductForm form");
 
@@ -86,7 +95,7 @@ async function loadRecentProducts(userId) {
             row.innerHTML = `
                 <td>${product.name}</td>
                 <td>${product.category}</td>
-                <td>₱${product.price.toFixed(2)}</td>
+                <td>${formatCurrency(product.price)}</td>
                 <td>${product.quantity}</td>
                 <td class="actions">
                     <button class="btn-edit"><ion-icon name="create-outline"></ion-icon></button>
