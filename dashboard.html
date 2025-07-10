@@ -13,14 +13,6 @@
     <!--<base href="/BizVentory-app/">-->
     <style>
 
-            .purchase-section {
-        display: none; /* Initially hidden */
-    }
-
-    .purchase-section.active {
-        display: block; /* Show when active */
-    }
-
         /* Notifications Section Styling */
         .notifications-section {
             margin-top: 20px;
@@ -543,6 +535,7 @@
         </div>
     </div>
     
+
 <!-- Inventory Analytics Section -->
 <div class="inventory-analytics-section">
     <div class="section-header">
@@ -698,7 +691,7 @@
                 </div>
             </div>
         </div>
-        
+</div>
         <!-- Data Export -->
         <div class="export-panel">
             <button id="exportComparisonData" class="export-btn">
@@ -713,36 +706,36 @@
         </div>
     </div>
 </div>
-</div>
-<!-- Customer Purchase -->
-<div class="data-table VehicleDetails" id="purchaseSection">
-    <div class="title">
-        <ion-icon name="bag-outline"></ion-icon>
-        <span class="text">Products</span>
-    </div>
-    <div>
-        <div class="product-cart-container">
-            <div class="products-section">
-                <div class="section-header">
-                    <h2>Purchase Products</h2>
-                    <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+
+ <!-- Customer Purchase -->
+            <div style="display:none" class="data-table VehicleDetails">
+                <div class="title">
+                    <ion-icon name="bag-outline"></ion-icon>
+                    <span class="text">Products</span>
                 </div>
-                <div class="products-container" id="productsContainer">
-                    <!-- Products will be dynamically inserted here with quantity controls -->
+                <div>
+                    <div class="product-cart-container">
+                        <div class="products-section">
+                            <div class="section-header">
+                                <h2>Purchase Products</h2>
+                                <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+                            </div>
+                            <div class="products-container">
+                                <!-- Products will be dynamically inserted here with quantity controls -->
+                            </div>
+                        </div>
+                    
+                        <!-- Cart Section -->
+                        <div class="cart-section">
+                            <div class="total-container">
+                                <strong>Total: ₱<span id="total">0</span></strong>
+                            </div>
+                            <div class="cart-container"></div>
+                            <button id="completePurchaseBtn" disabled>Complete Purchase</button>
+                        </div>
+                    </div>  
                 </div>
             </div>
-        
-            <!-- Cart Section -->
-            <div class="cart-section">
-                <div class="total-container">
-                    <strong>Total: ₱<span id="total">0</span></strong>
-                </div>
-                <div class="cart-container" id="cartContainer"></div>
-                <button id="completePurchaseBtn" disabled>Complete Purchase</button>
-            </div>
-        </div>  
-    </div>
-</div>
 
             <!-- Add Product -->
             <div style="display:none" class="data-table downloads">
