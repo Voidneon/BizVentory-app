@@ -725,133 +725,853 @@ async function completePurchase(userId) {
 }
 
 /* ====================== */
-/* ANALYTICS SYSTEM */
+/* INVENTORY ANALYTICS SYSTEM */
 /* ====================== */
+let allProducts = [];
+let chartInstances = {
+    categoryPieChart: null,
+    quantityBarChart: null,
+    expiryLineChart: null,
+    stockAlertChart: null,
+    comparisonChart: null,
+    metricCharts: {}
+};
+
+const comparisonState = {
+    selectedProducts: [],
+    selectedCategories: [],
+    currentMetrics: ['quantity', 'price'],
+    currentChartType: 'bar'
+};
+
 async function loadProductsForAnalytics(userId) {
     try {
         const q = query(collection(db, "users", userId, "products"));
         const querySnapshot = await getDocs(q);
 
-        const products = [];
+        allProducts = [];
         querySnapshot.forEach((doc) => {
-            products.push({
+            const productData = doc.data();
+            allProducts.push({
                 id: doc.id,
-                ...doc.data()
+                ...productData,
+                category: productData.category || 'Uncategorized',
+                quantity: productData.quantity || 0,
+                price: productData.price || 0,
+                expirationDate: productData.expirationDate || null,
+                lowStockThreshold: productData.lowStockThreshold || 5,
+                salesCount: productData.salesCount || 0,
+                cost: productData.cost || 0
             });
         });
 
-        renderCategoryPieChart(products);
-        renderQuantityBarChart(products);
-        renderExpiryLineChart(products);
+        setupInventoryFilters();
+        renderInventoryCharts(allProducts);
+        setupInventoryEventListeners();
+        setupComparisonControls();
+        updateProductSelectionList();
+        
     } catch (error) {
         console.error("Error loading products for analytics:", error);
-        showBubbleNotification("error", "alert-circle-outline", "Failed to load analytics data.");
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load inventory data.");
     }
 }
 
-function renderCategoryPieChart(products) {
-    const ctx = document.getElementById("categoryPieChart")?.getContext("2d");
-    if (!ctx) return;
+function setupInventoryFilters() {
+    const categoryFilter = document.getElementById('inventoryCategoryFilter');
+    const compCategoryFilter = document.getElementById('mainCategoryFilter');
+    
+    if (!categoryFilter && !compCategoryFilter) return;
 
-    const categoryCounts = {};
-    products.forEach(product => {
-        categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1;
-    });
-
-    new Chart(ctx, {
-        type: "pie",
-        data: {
-            labels: Object.keys(categoryCounts),
-            datasets: [{
-                data: Object.values(categoryCounts),
-                backgroundColor: [
-                    "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"
-                ],
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Product Categories"
-                }
+    // Clear existing options except the first one
+    [categoryFilter, compCategoryFilter].forEach(filter => {
+        if (filter) {
+            while (filter.options.length > 1) {
+                filter.remove(1);
             }
+        }
+    });
+    
+    const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    
+    categories.forEach(category => {
+        if (categoryFilter) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        }
+        
+        if (compCategoryFilter) {
+            const compOption = document.createElement('option');
+            compOption.value = category;
+            compOption.textContent = category;
+            compCategoryFilter.appendChild(compOption);
         }
     });
 }
 
-function renderQuantityBarChart(products) {
-    const ctx = document.getElementById("quantityBarChart")?.getContext("2d");
-    if (!ctx) return;
+function setupInventoryEventListeners() {
+    const inventorySearch = document.getElementById('inventorySearch');
+    if (inventorySearch) {
+        inventorySearch.addEventListener('input', () => {
+            filterAndRenderInventoryCharts();
+        });
+    }
+    
+    const categoryFilter = document.getElementById('inventoryCategoryFilter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            filterAndRenderInventoryCharts();
+        });
+    }
+    
+    const resetBtn = document.getElementById('resetInventoryFilters');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const searchInput = document.getElementById('inventorySearch');
+            const categorySelect = document.getElementById('inventoryCategoryFilter');
+            const feedback = document.getElementById('inventorySearchFeedback');
+            
+            if (searchInput) searchInput.value = '';
+            if (categorySelect) categorySelect.value = '';
+            if (feedback) feedback.style.display = 'none';
+            
+            renderInventoryCharts(allProducts);
+        });
+    }
+    
+    const exportBtn = document.getElementById('exportInventoryReport');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportInventoryReport);
+    }
+}
 
-    new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: products.map(p => p.name),
-            datasets: [{
-                label: "Stock Quantity",
-                data: products.map(p => p.quantity),
-                backgroundColor: "#36A2EB"
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Product Quantities"
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+function setupComparisonControls() {
+    const categorySelect = document.getElementById('mainCategoryFilter');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', (e) => {
+            comparisonState.selectedCategories = Array.from(e.target.selectedOptions)
+                .map(opt => opt.value);
+            updateProductSelectionList();
+        });
+    }
+
+    document.getElementById('productSearch')?.addEventListener('input', (e) => {
+        updateProductSelectionList(e.target.value.toLowerCase());
+    });
+
+    document.getElementById('comparisonChartType')?.addEventListener('change', (e) => {
+        comparisonState.currentChartType = e.target.value;
+        renderComparisonChart();
+    });
+
+    document.getElementById('comparisonMetric')?.addEventListener('change', (e) => {
+        comparisonState.currentMetrics = Array.from(e.target.selectedOptions)
+            .map(opt => opt.value);
+        renderComparisonChart();
+    });
+
+    document.getElementById('compareSelectedBtn')?.addEventListener('click', () => {
+        renderComparisonChart();
+    });
+
+    document.getElementById('clearSelectionBtn')?.addEventListener('click', () => {
+        comparisonState.selectedProducts = [];
+        updateSelectedProductsDisplay();
+        document.querySelectorAll('.product-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
     });
 }
 
-function renderExpiryLineChart(products) {
-    const ctx = document.getElementById("expiryLineChart")?.getContext("2d");
-    if (!ctx) return;
+function updateProductSelectionList(searchTerm = '') {
+    const container = document.getElementById('allProductsList');
+    if (!container) return;
 
-    const today = new Date();
-    const expiryData = products.map(product => {
-        if (!product.expirationDate) return 0;
-        const expiryDate = new Date(product.expirationDate);
-        return Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    container.innerHTML = '';
+
+    const filteredProducts = allProducts.filter(product => {
+        const matchesCategory = comparisonState.selectedCategories.length === 0 || 
+                              comparisonState.selectedCategories.includes(product.category);
+        const matchesSearch = searchTerm === '' || 
+                            product.name.toLowerCase().includes(searchTerm);
+        return matchesCategory && matchesSearch;
     });
 
-    new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: products.map(p => p.name),
-            datasets: [{
-                label: "Days Until Expiry",
-                data: expiryData,
-                backgroundColor: "#4BC0C0",
-                borderColor: "#4BC0C0",
-                borderWidth: 2,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Product Expiry"
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+    filteredProducts.forEach(product => {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `product-${product.id}`;
+        checkbox.value = product.id;
+        checkbox.checked = comparisonState.selectedProducts.some(p => p.id === product.id);
+        checkbox.addEventListener('change', (e) => {
+            toggleProductSelection(product, e.target.checked);
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = `product-${product.id}`;
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(product.name));
+
+        container.appendChild(label);
+    });
+}
+
+function toggleProductSelection(product, isSelected) {
+    if (isSelected) {
+        if (!comparisonState.selectedProducts.some(p => p.id === product.id)) {
+            comparisonState.selectedProducts.push(product);
+        }
+    } else {
+        comparisonState.selectedProducts = comparisonState.selectedProducts
+            .filter(p => p.id !== product.id);
+    }
+    updateSelectedProductsDisplay();
+}
+
+function updateSelectedProductsDisplay() {
+    const container = document.getElementById('selectedProductsList');
+    const countElement = document.getElementById('selectedCount');
+    if (!container || !countElement) return;
+
+    container.innerHTML = '';
+    countElement.textContent = comparisonState.selectedProducts.length;
+
+    comparisonState.selectedProducts.forEach(product => {
+        const tag = document.createElement('div');
+        tag.className = 'selected-product-tag';
+        tag.textContent = product.name;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', () => {
+            toggleProductSelection(product, false);
+            document.getElementById(`product-${product.id}`).checked = false;
+        });
+        
+        tag.appendChild(removeBtn);
+        container.appendChild(tag);
+    });
+}
+
+function filterAndRenderInventoryCharts() {
+    const searchTerm = document.getElementById('inventorySearch')?.value.toLowerCase() || '';
+    const category = document.getElementById('inventoryCategoryFilter')?.value || '';
+    
+    let filteredProducts = [...allProducts];
+    
+    if (searchTerm) {
+        filteredProducts = filteredProducts.filter(product => 
+            product.name.toLowerCase().includes(searchTerm) || 
+            (product.category && product.category.toLowerCase().includes(searchTerm))
+        );
+        
+        const feedback = document.getElementById('inventorySearchFeedback');
+        if (feedback) {
+            feedback.textContent = `Showing ${filteredProducts.length} products matching "${searchTerm}"`;
+            feedback.style.display = 'block';
+        }
+    } else {
+        const feedback = document.getElementById('inventorySearchFeedback');
+        if (feedback) feedback.style.display = 'none';
+    }
+    
+    if (category) {
+        filteredProducts = filteredProducts.filter(product => product.category === category);
+    }
+    
+    renderInventoryCharts(filteredProducts);
+}
+
+function renderInventoryCharts(products) {
+    // Safely destroy existing charts
+    Object.entries(chartInstances).forEach(([key, chart]) => {
+        if (chart && typeof chart.destroy === 'function') {
+            // Skip comparison chart and metric charts (handled separately)
+            if (key !== 'comparisonChart' && !key.startsWith('metric')) {
+                chart.destroy();
             }
         }
     });
+    
+    // Render new charts with null checks
+    renderCategoryPieChart(products);
+    renderQuantityBarChart(products);
+    renderExpiryLineChart(products);
+    renderStockAlertChart(products);
+}
+function renderComparisonChart() {
+    const ctx = document.getElementById('mainComparisonChart')?.querySelector('canvas')?.getContext('2d');
+    if (!ctx || comparisonState.selectedProducts.length === 0) {
+        showBubbleNotification("info", "information-circle-outline", "Please select products to compare");
+        return;
+    }
+
+    if (chartInstances.comparisonChart) {
+        chartInstances.comparisonChart.destroy();
+    }
+
+    const datasets = comparisonState.currentMetrics.map(metric => ({
+        label: metric.charAt(0).toUpperCase() + metric.slice(1),
+        data: comparisonState.selectedProducts.map(product => getProductMetricValue(product, metric)),
+        backgroundColor: getChartColor(metric),
+        borderColor: getChartColor(metric),
+        borderWidth: 1
+    }));
+
+    chartInstances.comparisonChart = new Chart(ctx, {
+        type: comparisonState.currentChartType,
+        data: {
+            labels: comparisonState.selectedProducts.map(p => p.name),
+            datasets
+        },
+        options: getComparisonChartOptions()
+    });
+
+    renderMetricMiniCharts();
+}
+
+function getProductMetricValue(product, metric) {
+    switch(metric) {
+        case 'quantity': return product.quantity;
+        case 'price': return product.price;
+        case 'sales': return product.salesCount || 0;
+        case 'profit': return (product.price - (product.cost || 0)) * (product.salesCount || 1);
+        default: return 0;
+    }
+}
+
+function renderMetricMiniCharts() {
+    comparisonState.currentMetrics.forEach(metric => {
+        const container = document.querySelector(`.metric-card[data-metric="${metric}"] .mini-chart`);
+        if (!container) return;
+
+        const ctx = container.querySelector('canvas').getContext('2d');
+        
+        if (chartInstances.metricCharts[metric]) {
+            chartInstances.metricCharts[metric].destroy();
+        }
+
+        chartInstances.metricCharts[metric] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: comparisonState.selectedProducts.map(p => p.name),
+                datasets: [{
+                    label: metric,
+                    data: comparisonState.selectedProducts.map(p => getProductMetricValue(p, metric)),
+                    backgroundColor: getChartColor(metric)
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrency(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+}
+
+function getChartColor(metric) {
+    const colors = {
+        quantity: '#36A2EB',
+        price: '#FFCE56',
+        sales: '#4BC0C0',
+        profit: '#9966FF'
+    };
+    return colors[metric] || '#6a1b9a';
+}
+
+function getComparisonChartOptions() {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Product Comparison'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return formatCurrency(value);
+                    }
+                }
+            }
+        }
+    };
+}
+
+
+    function renderCategoryPieChart(products) {
+        const ctx = document.getElementById("categoryPieChart")?.getContext("2d");
+        if (!ctx) {
+            console.warn("Category pie chart canvas not found");
+            return;
+        }
+
+        const categoryCounts = {};
+        products.forEach(product => {
+            const category = product.category || 'Uncategorized';
+            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        });
+
+        if (Object.keys(categoryCounts).length === 0) {
+            ctx.canvas.closest('.chart-card').innerHTML = '<p>No category data available</p>';
+            return;
+        }
+
+        chartInstances.categoryPieChart = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: Object.keys(categoryCounts),
+                datasets: [{
+                    data: Object.values(categoryCounts),
+                    backgroundColor: [
+                        "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", 
+                        "#9966FF", "#FF9F40", "#8AC24A", "#FF5722"
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Products by Category',
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderQuantityBarChart(products) {
+        const ctx = document.getElementById("quantityBarChart")?.getContext("2d");
+        if (!ctx) {
+            console.warn("Quantity bar chart canvas not found");
+            return;
+        }
+
+        // Sort products by quantity and take top 15
+        const sortedProducts = [...products]
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 15);
+
+        if (sortedProducts.length === 0) {
+            ctx.canvas.closest('.chart-card').innerHTML = '<p>No quantity data available</p>';
+            return;
+        }
+
+        chartInstances.quantityBarChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: sortedProducts.map(p => p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name),
+                datasets: [{
+                    label: "Stock Quantity",
+                    data: sortedProducts.map(p => p.quantity),
+                    backgroundColor: "#6a1b9a",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Top Products by Stock',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantity'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderExpiryLineChart(products) {
+        const ctx = document.getElementById("expiryLineChart")?.getContext("2d");
+        if (!ctx) {
+            console.warn("Expiry line chart canvas not found");
+            return;
+        }
+
+        const today = new Date();
+        const expiryData = products
+            .filter(product => product.expirationDate)
+            .map(product => {
+                const expiryDate = new Date(product.expirationDate);
+                return {
+                    name: product.name,
+                    daysUntilExpiry: Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24))
+                };
+            })
+            .filter(item => item.daysUntilExpiry !== null)
+            .sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+        if (expiryData.length === 0) {
+            ctx.canvas.closest('.chart-card').innerHTML = '<p>No expiry data available</p>';
+            return;
+        }
+
+        chartInstances.expiryLineChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: expiryData.map(item => item.name.length > 15 ? item.name.substring(0, 12) + '...' : item.name),
+                datasets: [{
+                    label: "Days Until Expiry",
+                    data: expiryData.map(item => item.daysUntilExpiry),
+                    borderColor: "#4CAF50",
+                    backgroundColor: "rgba(76, 175, 80, 0.1)",
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Product Expiry Timeline',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Days Remaining'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderStockAlertChart(products) {
+        const ctx = document.getElementById("stockAlertChart")?.getContext("2d");
+        if (!ctx) {
+            console.warn("Stock alert chart canvas not found");
+            return;
+        }
+
+        // Define stock status counts
+        const outOfStockProducts = products.filter(p => p.quantity === 0);
+        const lowStockProducts = products.filter(p => p.quantity > 0 && p.quantity <= (p.lowStockThreshold || 5));
+        const healthyStockProducts = products.filter(p => p.quantity > (p.lowStockThreshold || 5));
+
+        chartInstances.stockAlertChart = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: ["Healthy Stock", "Low Stock", "Out of Stock"],
+                datasets: [{
+                    data: [
+                        healthyStockProducts.length,
+                        lowStockProducts.length,
+                        outOfStockProducts.length
+                    ],
+                    backgroundColor: [
+                        "#4CAF50", // Green for healthy
+                        "#FFC107", // Yellow for low
+                        "#F44336"  // Red for out
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Stock Status Overview',
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function exportInventoryReport() {
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) {
+            showBubbleNotification("error", "alert-circle-outline", "PDF export library not loaded");
+            return;
+        }
+
+        const doc = new jsPDF();
+        
+        // Get current user info for report header
+        const user = auth.currentUser;
+        const userName = user?.displayName || user?.email || "Unknown User";
+        
+        // Report title and metadata
+        doc.setFontSize(18);
+        doc.text("Inventory Analytics Report", 14, 15);
+        
+        doc.setFontSize(10);
+        doc.text(`Generated by: ${userName}`, 14, 22);
+        doc.text(`Report Date: ${new Date().toLocaleDateString()}`, 14, 29);
+        
+        // Current filters
+        const searchTerm = document.getElementById('inventorySearch')?.value;
+        const category = document.getElementById('inventoryCategoryFilter')?.value;
+        
+        let filters = "All Products";
+        if (searchTerm) filters += `, Search: "${searchTerm}"`;
+        if (category) filters += `, Category: ${category}`;
+        
+        doc.text(`Filters: ${filters}`, 14, 36);
+        
+        // Add summary section
+        doc.setFontSize(12);
+        doc.text("Inventory Summary", 14, 45);
+        
+        const totalProducts = allProducts.length;
+        const lowStockCount = allProducts.filter(p => p.quantity <= (p.lowStockThreshold || 5)).length;
+        const outOfStockCount = allProducts.filter(p => p.quantity === 0).length;
+        const expiringSoonCount = allProducts.filter(p => {
+            if (!p.expirationDate) return false;
+            const expiryDate = new Date(p.expirationDate);
+            const today = new Date();
+            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+        }).length;
+        
+        doc.text(`Total Products: ${totalProducts}`, 14, 55);
+        doc.text(`Low Stock Items: ${lowStockCount}`, 14, 62);
+        doc.text(`Out of Stock Items: ${outOfStockCount}`, 14, 69);
+        doc.text(`Expiring Soon (≤7 days): ${expiringSoonCount}`, 14, 76);
+        
+        // Add product list table
+        const headers = [["Name", "Category", "Quantity", "Price", "Expiry Date"]];
+        const data = allProducts.map(p => [
+            p.name.length > 30 ? p.name.substring(0, 27) + '...' : p.name,
+            p.category || "N/A",
+            p.quantity.toString(),
+            formatCurrency(p.price || 0),
+            p.expirationDate ? new Date(p.expirationDate).toLocaleDateString() : "N/A"
+        ]);
+        
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 90,
+            headStyles: {
+                fillColor: [106, 27, 154],
+                textColor: 255
+            },
+            styles: {
+                fontSize: 8,
+                cellPadding: 2
+            },
+            columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 30 }
+            }
+        });
+        
+        // Save the PDF
+        doc.save(`inventory_report_${new Date().toISOString().slice(0,10)}.pdf`);
+        showBubbleNotification("success", "checkmark-circle-outline", "Inventory report exported");
+    }
+
+function setupViewToggle() {
+
+    
+    console.log('Initializing view toggle...');
+    
+    const viewBtns = document.querySelectorAll('.view-btn');
+    const inventoryViews = document.querySelectorAll('.inventory-view');
+    
+    console.log(`Found ${viewBtns.length} buttons and ${inventoryViews.length} views`);
+        
+        // Initialize views based on active button
+        const activeBtn = document.querySelector('.view-btn.active');
+        if (activeBtn) {
+            const activeView = activeBtn.dataset.view;
+            inventoryViews.forEach(view => {
+                view.style.display = view.dataset.view === activeView ? 'block' : 'none';
+                
+            });
+        }
+        
+        viewBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Prevent default if it's a button
+                e.preventDefault();
+                
+                // Update active button
+                viewBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Show corresponding view
+                const view = btn.dataset.view;
+                inventoryViews.forEach(v => {
+                    v.style.display = v.dataset.view === view ? 'block' : 'none';
+                });
+                
+                // Load data if needed
+                if (view === 'advanced' && comparisonState.selectedProducts.length === 0) {
+                    updateProductSelectionList();
+                }
+                
+                // Force chart resizing if needed
+                setTimeout(() => {
+                    Object.values(chartInstances).forEach(chart => {
+                        if (chart && typeof chart.resize === 'function') {
+                            chart.resize();
+                        }
+                    });
+                }, 100);
+            });
+        });
+    }
+
+    
+// Initialize the analytics section
+function initInventoryAnalytics(userId) {
+    // Initialize view toggle first
+    setupViewToggle();
+    
+    // Then load the products
+    loadProductsForAnalytics(userId);
+    
+    // Setup other event listeners
+    setupAdvancedViewListeners();
+}
+
+function setupAdvancedViewListeners() {
+    document.getElementById('compareSelectedBtn')?.addEventListener('click', renderComparisonChart);
+    document.getElementById('clearSelectionBtn')?.addEventListener('click', () => {
+        comparisonState.selectedProducts = [];
+        updateSelectedProductsDisplay();
+        document.querySelectorAll('.product-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+    });
+    
+    document.getElementById('exportComparisonData')?.addEventListener('click', exportComparisonData);
+}
+
+// Export function for comparison data
+function exportComparisonData() {
+    const format = document.getElementById('exportFormat').value;
+    
+    if (format === 'csv') {
+        exportComparisonCSV();
+    } else if (format === 'pdf') {
+        exportComparisonPDF();
+    } else if (format === 'png') {
+        exportComparisonImage();
+    }
+}
+
+function exportComparisonCSV() {
+    if (comparisonState.selectedProducts.length === 0) {
+        showBubbleNotification("info", "information-circle-outline", "No products selected for export");
+        return;
+    }
+
+    let csvContent = "Product Name,Category,Quantity,Price,Sales Count,Profit\n";
+    
+    comparisonState.selectedProducts.forEach(product => {
+        const profit = (product.price - (product.cost || 0)) * (product.salesCount || 1);
+        csvContent += `"${product.name}","${product.category}",${product.quantity},${product.price},${product.salesCount || 0},${profit}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `product_comparison_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showBubbleNotification("success", "checkmark-circle-outline", "Comparison data exported as CSV");
 }
 
 /* ====================== */
@@ -983,11 +1703,15 @@ function updateSalesCharts(sales) {
 }
 
 function updateTrendChart(labels, data) {
-    const ctx = document.getElementById("salesTrendChart").getContext("2d");
+    const ctx = document.getElementById("salesTrendChart")?.getContext("2d");
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.salesTrendChart) {
+    // Check if chart exists and has destroy method
+    if (window.salesTrendChart && typeof window.salesTrendChart.destroy === 'function') {
         window.salesTrendChart.destroy();
+    } else {
+        // If invalid chart instance exists, clear it
+        window.salesTrendChart = null;
     }
     
     window.salesTrendChart = new Chart(ctx, {
@@ -1022,14 +1746,16 @@ function updateTrendChart(labels, data) {
 }
 
 function updateProductPerformanceChart(labels, data) {
-    const ctx = document.getElementById("productPerformanceChart").getContext("2d");
+    const ctx = document.getElementById("productPerformanceChart")?.getContext("2d");
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.productPerformanceChart) {
+    // Safely destroy existing chart if it exists
+    if (window.productPerformanceChart && typeof window.productPerformanceChart.destroy === 'function') {
         window.productPerformanceChart.destroy();
+    } else {
+        window.productPerformanceChart = null;
     }
     
-    // Sort products by revenue and take top 10
     const products = labels.map((label, index) => ({
         name: label,
         revenue: data[index]
@@ -1281,17 +2007,29 @@ async function loadRecentProducts(userId) {
 /* NAVIGATION */
 /* ====================== */
 function setupNavigation() {
-    document.querySelectorAll(".navList").forEach(element => {
-        element.addEventListener("click", function () {
+    document.querySelectorAll(".navList").forEach((element, index) => {
+        element.addEventListener("click", function() {
             document.querySelectorAll(".navList").forEach(e => e.classList.remove("active"));
             this.classList.add("active");
 
-            const index = Array.from(this.parentNode.children).indexOf(this);
-            document.querySelectorAll(".data-table").forEach(table => table.style.display = "none");
+            // Hide all data tables except the purchase section
+            document.querySelectorAll(".data-table").forEach(table => {
+                if (!table.classList.contains("VehicleDetails")) {
+                    table.style.display = "none";
+                }
+            });
 
-            const tables = document.querySelectorAll(".data-table");
-            if (tables.length > index) {
-                tables[index].style.display = "block";
+            // Special handling for purchase section
+            if (this.textContent.includes("Purchase")) {
+                document.querySelector(".VehicleDetails").style.display = "block";
+                // Initialize purchase system if needed
+                const user = auth.currentUser;
+                if (user) initPurchaseSystem(user.uid);
+            } else {
+                const tables = document.querySelectorAll(".data-table:not(.VehicleDetails)");
+                if (tables.length > index) {
+                    tables[index].style.display = "block";
+                }
             }
         });
     });
@@ -1468,6 +2206,49 @@ function initSalesReport() {
     });
 }
 
+async function initPurchaseSystem(userId) {
+    try {
+        // Show loading state
+        const purchaseSection = document.querySelector('.purchase-section');
+        if (purchaseSection) {
+            purchaseSection.innerHTML = '<div class="loading">Loading products...</div>';
+        }
+
+        // Load products
+        await loadProducts(userId);
+        
+        // Setup cart listeners
+        setupCartEventListeners();
+        
+        // Update cart display
+        updateCart();
+        updatePurchaseButton();
+        
+        // Setup complete purchase button
+        const completePurchaseBtn = document.getElementById('completePurchaseBtn');
+        if (completePurchaseBtn) {
+            completePurchaseBtn.addEventListener('click', () => completePurchase(userId));
+        }
+        
+        // Setup product search
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.addEventListener('input', filterProducts);
+        }
+
+    } catch (error) {
+        console.error("Error initializing purchase system:", error);
+        showBubbleNotification("error", "alert-circle-outline", "Failed to load purchase system");
+        
+        // Show error state
+        const purchaseSection = document.querySelector('.purchase-section');
+        if (purchaseSection) {
+            purchaseSection.innerHTML = '<div class="error">Failed to load products. Please try again.</div>';
+        }
+    }
+}
+
+
 /* ====================== */
 /* INITIALIZATION */
 /* ====================== */
@@ -1477,6 +2258,11 @@ function initApp() {
     updateCart();
     updatePurchaseButton();
     initSalesReport();
+
+    const user = auth.currentUser;
+    if (user) {
+        initPurchaseSystem(user.uid);
+    }
 
     const completePurchaseBtn = document.getElementById("completePurchaseBtn");
     if (completePurchaseBtn) {

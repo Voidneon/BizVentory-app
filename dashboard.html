@@ -10,8 +10,17 @@
     <link rel="stylesheet" href="Assets/style.css">
     <link rel="icon" type="image/png" href="Assets/bizlogo.png">
     <title>Dashboard</title>
-    <base href="/BizVentory-app/">
+    <!--<base href="/BizVentory-app/">-->
     <style>
+
+            .purchase-section {
+        display: none; /* Initially hidden */
+    }
+
+    .purchase-section.active {
+        display: block; /* Show when active */
+    }
+
         /* Notifications Section Styling */
         .notifications-section {
             margin-top: 20px;
@@ -314,6 +323,8 @@
                 min-width: 100%;
             }
         }
+
+
     </style>
 </head>
 
@@ -462,119 +473,276 @@
                 </div>
             </div>
             
-            <!-- Analytics -->
-            <div style="display:none" class="data-table EditUserRole">
-                <div class="title">
-                    <ion-icon name="analytics-outline"></ion-icon>
-                    <span class="text">Analytics</span>
+<!-- Analytics Section -->
+<div style="display:none" class="data-table EditUserRole">
+    <div class="title">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <span class="text">Analytics</span>
+    </div>
+    
+    <!-- Sales Report Section (unchanged) -->
+    <div class="sales-report-section">
+        <div class="report-controls">
+            <h2>Sales Report</h2>
+            <div class="report-filters">
+                <select id="reportPeriod">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+                <div id="customDateRange" style="display:none;">
+                    <input type="date" id="startDate">
+                    <span>to</span>
+                    <input type="date" id="endDate">
+                </div>
+                <button id="generateReportBtn">Generate Report</button>
+                <button id="exportReportBtn">Export Report</button>
+            </div>
+        </div>
+        
+        <div class="report-results">
+            <div class="report-summary">
+                <div class="summary-card">
+                    <h3>Total Revenue</h3>
+                    <p id="totalRevenue">₱0.00</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Total Sales</h3>
+                    <p id="totalSales">0</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Average Sale</h3>
+                    <p id="averageSale">₱0.00</p>
+                </div>
+            </div>
+            
+            <div class="report-charts">
+                <canvas id="salesTrendChart"></canvas>
+                <canvas id="productPerformanceChart"></canvas>
+            </div>
+            
+            <div class="report-details">
+                <table id="salesDetailsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Transaction ID</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th>Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Sales data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+<!-- Inventory Analytics Section -->
+<div class="inventory-analytics-section">
+    <div class="section-header">
+        <h2>Inventory Analytics</h2>
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="standard">Standard View</button>
+            <button class="view-btn" data-view="advanced">Advanced View</button>
+        </div>
+    </div>
+    
+    <!-- Standard Inventory View -->
+    <div class="inventory-view active" data-view="standard">
+        <div class="inventory-controls">
+            <div class="search-filter">
+                <input type="text" id="inventorySearch" placeholder="Search products...">
+                <div id="inventorySearchFeedback" class="search-feedback"></div>
+            </div>
+            <div class="category-filter">
+                <select id="inventoryCategoryFilter">
+                    <option value="">All Categories</option>
+                    <!-- Categories will be populated dynamically -->
+                </select>
+            </div>
+            <button id="resetInventoryFilters" class="reset-btn">Reset</button>
+            <button id="exportInventoryReport" class="export-btn">Export Report</button>
+        </div>
+        
+        <div class="inventory-charts-grid">
+            <div class="chart-card">
+                <h3>Category Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Stock Levels</h3>
+                <div class="chart-container">
+                    <canvas id="quantityBarChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Expiry Timeline</h3>
+                <div class="chart-container">
+                    <canvas id="expiryLineChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Stock Alerts</h3>
+                <div class="chart-container">
+                    <canvas id="stockAlertChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Advanced Inventory View -->
+    <div class="inventory-view" data-view="advanced">
+        <!-- Comparison Controls -->
+        <div class="comparison-controls">
+            <!-- Search and Category Filter -->
+            <div class="control-group">
+                <div class="search-box">
+                    <input type="text" id="productSearch" placeholder="Search products...">
+                    <ion-icon name="search-outline"></ion-icon>
+                </div>
+                <select id="mainCategoryFilter" multiple>
+                    <option value="">All Categories</option>
+                    <!-- Categories will be populated dynamically -->
+                </select>
+            </div>
+            
+            <!-- Product Selection Panel -->
+            <div class="product-selection-panel">
+                <div class="product-category-group">
+                    <h4>Available Products</h4>
+                    <div class="product-checkboxes" id="allProductsList">
+                        <!-- Dynamically populated -->
+                    </div>
                 </div>
                 
-                <!-- Sales Report Section -->
-                <div class="sales-report-section">
-                    <div class="report-controls">
-                        <h2>Sales Report</h2>
-                        <div class="report-filters">
-                            <select id="reportPeriod">
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="custom">Custom Range</option>
-                            </select>
-                            <div id="customDateRange" style="display:none;">
-                                <input type="date" id="startDate">
-                                <span>to</span>
-                                <input type="date" id="endDate">
-                            </div>
-                            <button id="generateReportBtn">Generate Report</button>
-                            <button id="exportReportBtn">Export Report</button>
-                        </div>
-                    </div>
-                    
-                    <div class="report-results">
-                        <div class="report-summary">
-                            <div class="summary-card">
-                                <h3>Total Revenue</h3>
-                                <p id="totalRevenue">₱0.00</p>
-                            </div>
-                            <div class="summary-card">
-                                <h3>Total Sales</h3>
-                                <p id="totalSales">0</p>
-                            </div>
-                            <div class="summary-card">
-                                <h3>Average Sale</h3>
-                                <p id="averageSale">₱0.00</p>
-                            </div>
-                        </div>
-                        
-                        <div class="report-charts">
-                            <canvas id="salesTrendChart"></canvas>
-                            <canvas id="productPerformanceChart"></canvas>
-                        </div>
-                        
-                        <div class="report-details">
-                            <table id="salesDetailsTable">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Transaction ID</th>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Unit Price</th>
-                                        <th>Total</th>
-                                        <th>Profit</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Sales data will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="selection-actions">
+                    <button id="compareSelectedBtn" class="compare-btn">
+                        <ion-icon name="git-compare-outline"></ion-icon>
+                        Compare Selected
+                    </button>
+                    <button id="clearSelectionBtn" class="clear-btn">
+                        <ion-icon name="trash-outline"></ion-icon>
+                        Clear
+                    </button>
                 </div>
                 
-                <!-- Existing Charts -->
-                <div class="charts-container">
-                    <div class="chart-container">
-                        <canvas id="categoryPieChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="quantityBarChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="expiryLineChart"></canvas>
+                <div class="selected-products-group">
+                    <h4>Products to Compare (<span id="selectedCount">0</span>)</h4>
+                    <div class="selected-products-list" id="selectedProductsList">
+                        <!-- Selected products appear here -->
                     </div>
                 </div>
             </div>
-
-            <!-- Customer Purchase -->
-            <div style="display:none" class="data-table VehicleDetails">
-                <div class="title">
-                    <ion-icon name="bag-outline"></ion-icon>
-                    <span class="text">Products</span>
+            
+            <!-- Chart Configuration -->
+            <div class="chart-configuration">
+                <div class="config-group">
+                    <label>Chart Type:</label>
+                    <select id="comparisonChartType">
+                        <option value="bar">Bar Chart</option>
+                        <option value="line">Line Chart</option>
+                        <option value="radar">Radar Chart</option>
+                    </select>
                 </div>
-                <div>
-                    <div class="product-cart-container">
-                        <div class="products-section">
-                            <div class="section-header">
-                                <h2>Purchase Products</h2>
-                                <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
-                            </div>
-                            <div class="products-container">
-                                <!-- Products will be dynamically inserted here with quantity controls -->
-                            </div>
-                        </div>
-                    
-                        <!-- Cart Section -->
-                        <div class="cart-section">
-                            <div class="total-container">
-                                <strong>Total: ₱<span id="total">0</span></strong>
-                            </div>
-                            <div class="cart-container"></div>
-                            <button id="completePurchaseBtn" disabled>Complete Purchase</button>
-                        </div>
-                    </div>  
+                
+                <div class="config-group">
+                    <label>Metrics:</label>
+                    <select id="comparisonMetric" multiple>
+                        <option value="quantity">Stock Quantity</option>
+                        <option value="price">Price</option>
+                        <option value="sales">Sales Volume</option>
+                        <option value="profit">Profit Margin</option>
+                    </select>
                 </div>
             </div>
+        </div>
+        
+        <!-- Comparison Charts Area -->
+        <div class="comparison-results">
+            <div class="chart-container full-width" id="mainComparisonChart">
+                <canvas></canvas>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card" data-metric="quantity">
+                    <h5>Stock Levels</h5>
+                    <div class="mini-chart">
+                        <canvas></canvas>
+                    </div>
+                </div>
+                <div class="metric-card" data-metric="price">
+                    <h5>Price Comparison</h5>
+                    <div class="mini-chart">
+                        <canvas></canvas>
+                    </div>
+                </div>
+                <div class="metric-card" data-metric="sales">
+                    <h5>Sales Performance</h5>
+                    <div class="mini-chart">
+                        <canvas></canvas>
+                    </div>
+                </div>
+                <div class="metric-card" data-metric="profit">
+                    <h5>Profit Margins</h5>
+                    <div class="mini-chart">
+                        <canvas></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Export -->
+        <div class="export-panel">
+            <button id="exportComparisonData" class="export-btn">
+                <ion-icon name="download-outline"></ion-icon>
+                Export Comparison Data
+            </button>
+            <select id="exportFormat">
+                <option value="png">PNG Image</option>
+                <option value="pdf">PDF Report</option>
+                <option value="csv">CSV Data</option>
+            </select>
+        </div>
+    </div>
+</div>
+</div>
+<!-- Customer Purchase -->
+<div class="data-table VehicleDetails" id="purchaseSection">
+    <div class="title">
+        <ion-icon name="bag-outline"></ion-icon>
+        <span class="text">Products</span>
+    </div>
+    <div>
+        <div class="product-cart-container">
+            <div class="products-section">
+                <div class="section-header">
+                    <h2>Purchase Products</h2>
+                    <input type="text" id="search" placeholder="🔍 Search Products here..." onkeyup="filterProducts()">
+                </div>
+                <div class="products-container" id="productsContainer">
+                    <!-- Products will be dynamically inserted here with quantity controls -->
+                </div>
+            </div>
+        
+            <!-- Cart Section -->
+            <div class="cart-section">
+                <div class="total-container">
+                    <strong>Total: ₱<span id="total">0</span></strong>
+                </div>
+                <div class="cart-container" id="cartContainer"></div>
+                <button id="completePurchaseBtn" disabled>Complete Purchase</button>
+            </div>
+        </div>  
+    </div>
+</div>
 
             <!-- Add Product -->
             <div style="display:none" class="data-table downloads">
