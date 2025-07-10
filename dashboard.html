@@ -3,7 +3,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -175,6 +174,146 @@
             background: #cccccc;
             cursor: not-allowed;
         }
+
+        /* Sales Report Styles */
+        .sales-report-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .report-filters {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .report-filters select, 
+        .report-filters input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .report-filters button {
+            padding: 8px 16px;
+            background: #6a1b9a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .report-filters button:hover {
+            background: #8e24aa;
+        }
+
+        #customDateRange {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .summary-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: #f3e5f5;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            margin-top: 0;
+            color: #4a148c;
+            font-size: 16px;
+        }
+
+        .summary-card p {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6a1b9a;
+            margin: 10px 0 0;
+        }
+
+        .report-charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .report-charts canvas {
+            flex: 1;
+            min-width: 300px;
+            height: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .report-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .report-details th {
+            background-color: #f3e5f5;
+            padding: 10px;
+            text-align: left;
+            color: #4a148c;
+        }
+
+        .report-details td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e1bee7;
+        }
+
+        .report-details tr:nth-child(even) {
+            background-color: #faf5fb;
+        }
+
+        .report-details tr:hover {
+            background-color: #f5eef7;
+        }
+
+        @media (max-width: 768px) {
+            .report-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .report-filters {
+                width: 100%;
+            }
+            
+            .summary-card {
+                min-width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -236,7 +375,6 @@
                         <span class="links">Inventory</span>
                     </a>
                 </li>
-
             </ul>
             <ul class="bottom-link">
                 <li>
@@ -246,9 +384,9 @@
                     </a>
                 </li>
                 <li>
-                        <a href="#logout" id="logout">
-                            <ion-icon name="log-out-outline"></ion-icon>
-                            <span class="links">Logout</span>
+                    <a href="#logout" id="logout">
+                        <ion-icon name="log-out-outline"></ion-icon>
+                        <span class="links">Logout</span>
                     </a>
                 </li>
             </ul>
@@ -294,7 +432,6 @@
                     <span class="text">Recent Activities</span>
                 </div>
                 <div>
-                    <!-- Enter any table or section here -->
                     <div class="products-table">
                         <table>
                             <thead>
@@ -331,18 +468,78 @@
                     <ion-icon name="analytics-outline"></ion-icon>
                     <span class="text">Analytics</span>
                 </div>
+                
+                <!-- Sales Report Section -->
+                <div class="sales-report-section">
+                    <div class="report-controls">
+                        <h2>Sales Report</h2>
+                        <div class="report-filters">
+                            <select id="reportPeriod">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                            <div id="customDateRange" style="display:none;">
+                                <input type="date" id="startDate">
+                                <span>to</span>
+                                <input type="date" id="endDate">
+                            </div>
+                            <button id="generateReportBtn">Generate Report</button>
+                            <button id="exportReportBtn">Export Report</button>
+                        </div>
+                    </div>
+                    
+                    <div class="report-results">
+                        <div class="report-summary">
+                            <div class="summary-card">
+                                <h3>Total Revenue</h3>
+                                <p id="totalRevenue">₱0.00</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>Total Sales</h3>
+                                <p id="totalSales">0</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>Average Sale</h3>
+                                <p id="averageSale">₱0.00</p>
+                            </div>
+                        </div>
+                        
+                        <div class="report-charts">
+                            <canvas id="salesTrendChart"></canvas>
+                            <canvas id="productPerformanceChart"></canvas>
+                        </div>
+                        
+                        <div class="report-details">
+                            <table id="salesDetailsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Transaction ID</th>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Total</th>
+                                        <th>Profit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Sales data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Existing Charts -->
                 <div class="charts-container">
-                    <!-- Pie Chart for Product Categories -->
                     <div class="chart-container">
                         <canvas id="categoryPieChart"></canvas>
                     </div>
-            
-                    <!-- Bar Chart for Product Quantities -->
                     <div class="chart-container">
                         <canvas id="quantityBarChart"></canvas>
                     </div>
-            
-                    <!-- Line Chart for Product Expiry -->
                     <div class="chart-container">
                         <canvas id="expiryLineChart"></canvas>
                     </div>
@@ -479,6 +676,12 @@
             setTimeout(() => {
                 showBubbleNotification('success', 'checkmark-circle-outline', 'System loaded successfully!');
             }, 1000);
+        });
+
+        // Sales Report Date Filter Toggle
+        document.getElementById('reportPeriod').addEventListener('change', function() {
+            const customDateRange = document.getElementById('customDateRange');
+            customDateRange.style.display = this.value === 'custom' ? 'flex' : 'none';
         });
     </script>
 </body>
