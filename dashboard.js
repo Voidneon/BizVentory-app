@@ -2296,7 +2296,7 @@ function initApp() {
             loadSalesReport(user.uid);
         } else {
             showBubbleNotification("error", "alert-circle-outline", "You are not logged in!");
-            window.location.href = "login.html";
+            window.location.href = "index.html";
         }
     });
 }
