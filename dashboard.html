@@ -22,6 +22,38 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
+        .activityTable .title ion-icon {
+            margin-left: 8px !important;
+            margin-right: 0 !important;
+        }
+
+        .activityTable .title {
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        .data-table.userDetailsTable .title {
+            display: flex;
+            align-items: center;
+        }
+
+        .data-table.userDetailsTable .title ion-icon {
+            margin-left: 8px !important;
+            margin-right: 0 !important;
+        }
+
+        .data-table.EditUserRole .title,
+        .data-table.VehicleDetails .title {
+            display: flex;
+            align-items: center;
+        }
+
+        .data-table.EditUserRole .title ion-icon,
+        .data-table.VehicleDetails .title ion-icon {
+            margin-left: 8px;
+            margin-right: 0;
+        }
         .notifications-section h2 {
             margin-bottom: 15px;
             font-size: 18px;
@@ -316,6 +348,10 @@
                 min-width: 100%;
             }
         }
+
+        activityTable .title ion-icon {
+margin-right: 8px !important;
+}
 
 
     </style>
@@ -751,7 +787,6 @@
             </div>
         </div>
     </section>
-
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
