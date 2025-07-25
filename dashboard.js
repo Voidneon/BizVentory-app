@@ -892,10 +892,10 @@ function updateProductSelectionList(searchTerm = '') {
     container.innerHTML = '';
 
     const filteredProducts = allProducts.filter(product => {
-        const matchesCategory = comparisonState.selectedCategories.length === 0 || 
-                              comparisonState.selectedCategories.includes(product.category);
-        const matchesSearch = searchTerm === '' || 
-                            product.name.toLowerCase().includes(searchTerm);
+        const matchesCategory = comparisonState.selectedCategories.length === 0 ||
+        comparisonState.selectedCategories.includes(product.category);
+        const matchesSearch = searchTerm === '' ||
+            product.name.toLowerCase().includes(searchTerm);
         return matchesCategory && matchesSearch;
     });
 
@@ -2132,7 +2132,7 @@ async function loadNotifications(userId) {
         notifications.forEach(notification => {
             const notificationElement = document.createElement("div");
             notificationElement.className = `notification ${notification.type === "error" ? "out-of-stock" : 
-                                          notification.type === "warning" ? "low-stock" : "expiring"}`;
+            notification.type === "warning" ? "low-stock" : "expiring"}`;
             notificationElement.textContent = notification.message;
             notificationsContainer.appendChild(notificationElement);
         });
@@ -2171,6 +2171,7 @@ async function loadDashboardCounts(userId) {
     }
 }
 
+
 /* ====================== */
 /* SALES REPORT INITIALIZATION */
 /* ====================== */
@@ -2205,6 +2206,9 @@ function initSalesReport() {
         }
     });
 }
+
+
+
 
 async function initPurchaseSystem(userId) {
     try {
@@ -2247,6 +2251,7 @@ async function initPurchaseSystem(userId) {
         }
     }
 }
+
 
 
 /* ====================== */
@@ -2300,5 +2305,8 @@ function initApp() {
         }
     });
 }
+
+
+
 
 document.addEventListener("DOMContentLoaded", initApp);
