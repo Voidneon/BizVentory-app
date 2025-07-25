@@ -15,13 +15,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);   
 const auth = getAuth();
 
-/* ====================== */
-/* CURRENCY FORMATTING */
-/* ====================== */
 function formatCurrency(amount) {
     if (amount === null || amount === undefined || amount === '') return '₱0.00';
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+function formatTimestamp(isoString) {
+    const date = new Date(isoString);
+    return date.toISOString().split('T')[0] + ' ' + 
+           date.toTimeString().split(' ')[0].substring(0, 8);
+}
+
+function generateBatchId() {
+    return 'batch_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -35,7 +42,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Load recent products
         loadRecentProducts(user.uid);
 
         form.addEventListener("submit", async (event) => {
@@ -48,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const expirationDate = document.getElementById("expirationDate").value;
             const lowStockThreshold = parseInt(document.getElementById("lowStockThreshold").value) || 0;
             const description = document.getElementById("productDescription").value.trim();
-            const date = new Date().toISOString();
+            const now = new Date();
 
             if (!productName || !category || !price || !quantity || !lowStockThreshold) {
                 alert("❌ Please fill out all required fields.");
@@ -56,22 +62,31 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             try {
+                const initialBatch = {
+                    batchID: generateBatchId(),
+                    quantity: quantity,
+                    expirationDate: expirationDate || null,
+                    dateAdded: now.toISOString(),
+                    addedFormatted: formatTimestamp(now.toISOString())
+                };
+
                 await addDoc(collection(db, "users", user.uid, "products"), {
                     name: productName,
                     category: category,
                     price: price,
                     quantity: quantity,
+                    batches: [initialBatch],
                     expirationDate: expirationDate || null,
                     lowStockThreshold: lowStockThreshold,
                     description: description,
-                    date: date
+                    date: now.toISOString()
                 });
 
                 console.log("✅ Product added successfully!");
                 alert("✅ Product added successfully!");
 
-                form.reset(); // Clear form fields
-                loadRecentProducts(user.uid); // Refresh recent products
+                form.reset();
+                loadRecentProducts(user.uid);
             } catch (error) {
                 console.error("❌ Error adding product:", error);
                 alert("❌ Failed to add product.");
@@ -82,7 +97,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 async function loadRecentProducts(userId) {
     const recentProductsBody = document.getElementById("recentProductsBody");
-    recentProductsBody.innerHTML = ""; // Clear existing content
+    recentProductsBody.innerHTML = "";
 
     try {
         const q = query(collection(db, "users", userId, "products"), orderBy("date", "desc"), limit(5));

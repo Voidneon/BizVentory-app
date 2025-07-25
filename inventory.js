@@ -24,7 +24,20 @@ function formatCurrency(amount) {
     return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }
 
-// Declare selectedProductId in the global scope
+/* ====================== */
+/* TIMESTAMP FORMATTING */
+/* ====================== */
+function formatTimestamp(isoString) {
+    if (!isoString) return "N/A";
+    const date = new Date(isoString);
+    return date.toISOString().split('T')[0] + ' ' + 
+           date.toTimeString().split(' ')[0].substring(0, 8);
+}
+
+function generateBatchId() {
+    return 'batch_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
 let selectedProductId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -45,23 +58,19 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Load all products
         loadProducts(user.uid);
 
-        // Search functionality
         searchInput.addEventListener("input", () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
             filterProducts(searchTerm);
         });
 
-        // Close popup
         closePopupButtons.forEach(button => {
             button.addEventListener("click", () => {
                 manageStockPopup.style.display = "none";
             });
         });
 
-        // Show/hide fields based on action
         stockAction.addEventListener("change", () => {
             if (stockAction.value === "increase") {
                 batchSelection.style.display = "none";
@@ -73,7 +82,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        // Manage stock form submission
         manageStockForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
@@ -95,37 +103,55 @@ document.addEventListener("DOMContentLoaded", function () {
                 const productDoc = await getDoc(productRef);
                 const product = productDoc.data();
 
-                // Ensure batches field exists and is an array
                 if (!product.batches) {
                     product.batches = [];
                 }
 
                 if (action === "increase") {
-                    // Add new batch
+                    const newBatch = {
+                        batchID: generateBatchId(),
+                        quantity: quantity,
+                        expirationDate: expirationDate || null,
+                        dateAdded: new Date().toISOString(),
+                        addedFormatted: formatTimestamp(new Date().toISOString())
+                    };
+                    
                     await updateDoc(productRef, {
-                        batches: arrayUnion({
-                            batchID: new Date().toISOString(),
-                            quantity: quantity,
-                            expirationDate: expirationDate || null
-                        }),
+                        batches: arrayUnion(newBatch),
                         quantity: product.quantity + quantity
                     });
                 } else if (action === "decrease") {
-                    // Decrease stock from selected batch
                     const batch = product.batches.find(b => b.batchID === selectedBatchId);
                     if (!batch || batch.quantity < quantity) {
                         alert("❌ Not enough stock in the selected batch.");
                         return;
                     }
-                    await updateDoc(productRef, {
-                        batches: arrayRemove(batch),
-                        quantity: product.quantity - quantity
-                    });
+                    
+                    if (batch.quantity === quantity) {
+                        await updateDoc(productRef, {
+                            batches: arrayRemove(batch),
+                            quantity: product.quantity - quantity
+                        });
+                    } else {
+                        const updatedBatch = {
+                            ...batch,
+                            quantity: batch.quantity - quantity
+                        };
+                        
+                        await updateDoc(productRef, {
+                            batches: arrayRemove(batch),
+                            quantity: product.quantity - quantity
+                        });
+                        
+                        await updateDoc(productRef, {
+                            batches: arrayUnion(updatedBatch)
+                        });
+                    }
                 }
 
                 alert("✅ Stock updated successfully!");
                 manageStockPopup.style.display = "none";
-                loadProducts(user.uid); // Refresh product list
+                loadProducts(user.uid);
             } catch (error) {
                 console.error("❌ Error updating stock:", error);
                 alert("❌ Failed to update stock.");
@@ -136,7 +162,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 async function loadProducts(userId) {
     const productsBody = document.getElementById("productsBody");
-    productsBody.innerHTML = ""; // Clear existing content
+    productsBody.innerHTML = "";
 
     try {
         const q = query(collection(db, "users", userId, "products"), orderBy("name"));
@@ -161,12 +187,14 @@ async function loadProducts(userId) {
             productsBody.appendChild(row);
         });
 
-        // Add event listeners to manage buttons
         const manageButtons = document.querySelectorAll(".btn-manage");
         manageButtons.forEach(button => {
             button.addEventListener("click", (event) => {
                 selectedProductId = event.currentTarget.getAttribute("data-id");
                 manageStockPopup.style.display = "flex";
+                stockAction.value = "increase";
+                batchSelection.style.display = "none";
+                expirationDateField.style.display = "block";
             });
         });
     } catch (error) {
@@ -177,28 +205,34 @@ async function loadProducts(userId) {
 
 async function loadBatches(userId, productId) {
     const batchSelect = document.getElementById("batchSelect");
-    batchSelect.innerHTML = ""; // Clear existing options
+    batchSelect.innerHTML = "";
 
     try {
         const productRef = doc(db, "users", userId, "products", productId);
         const productDoc = await getDoc(productRef);
         const product = productDoc.data();
 
-        // Ensure batches field exists and is an array
-        if (!product.batches) {
-            product.batches = [];
+        if (!product.batches || product.batches.length === 0) {
+            batchSelect.innerHTML = "<option value=''>No batches available</option>";
+            return;
         }
 
-        if (product.batches.length > 0) {
-            product.batches.forEach(batch => {
-                const option = document.createElement("option");
-                option.value = batch.batchID;
-                option.textContent = `Batch: ${batch.batchID} (Qty: ${batch.quantity})`;
-                batchSelect.appendChild(option);
-            });
-        } else {
-            batchSelect.innerHTML = "<option>No batches available</option>";
-        }
+        const sortedBatches = [...product.batches].sort((a, b) => 
+            new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+        );
+
+        sortedBatches.forEach(batch => {
+            const option = document.createElement("option");
+            option.value = batch.batchID;
+            
+            let batchInfo = `${batch.addedFormatted || formatTimestamp(batch.dateAdded)} - ${batch.quantity} units`;
+            if (batch.expirationDate) {
+                batchInfo += ` (Exp: ${new Date(batch.expirationDate).toLocaleDateString()})`;
+            }
+            
+            option.textContent = batchInfo;
+            batchSelect.appendChild(option);
+        });
     } catch (error) {
         console.error("❌ Error loading batches:", error);
         alert("❌ Failed to load batches.");
