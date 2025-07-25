@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" href="Assets/bizlogo.png">
     <title>Dashboard</title>
     <!--<base href="/BizVentory-app/">-->
+
     <style>
 
         /* Notifications Section Styling */
@@ -706,6 +707,7 @@
         </div>
     </div>
 </div>
+</div>
 
  <!-- Customer Purchase -->
             <div style="display:none" class="data-table VehicleDetails">
@@ -753,10 +755,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="cart.js"></script>
-
-    <script src="cart.js" type="module"></script>
     <script src="dashboard.js" type="module"></script>
+    <script src="logoutindex.js" type="module"></script>
     <!-- Sources for icons -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
@@ -844,6 +844,32 @@
             const customDateRange = document.getElementById('customDateRange');
             customDateRange.style.display = this.value === 'custom' ? 'flex' : 'none';
         });
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+  const viewButtons = document.querySelectorAll(".view-btn");
+  const views = document.querySelectorAll(".inventory-view");
+
+  viewButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      // Remove active class from all buttons
+      viewButtons.forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      const selectedView = button.getAttribute("data-view");
+
+      // Show the correct view
+      views.forEach(view => {
+        if (view.getAttribute("data-view") === selectedView) {
+          view.classList.add("active");
+        } else {
+          view.classList.remove("active");
+        }
+      });
+    });
+  });
+});
+        
     </script>
 </body>
 </html>
